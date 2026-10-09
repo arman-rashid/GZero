@@ -9,7 +9,7 @@ The manual is `docs/User_Manual.pdf` (Help -> User manual in the program).
 
 ## Getting it
 
-**Windows, no Python needed:** download `GZero-v1.1-windows-x64.zip` from the
+**Windows, no Python needed:** download `GZero-v1.2-windows-x64.zip` from the
 [latest release](https://github.com/arman-rashid/GZero/releases/latest), unzip it and
 double-click `GZero\GZero.exe`. Keep the folder together.
 

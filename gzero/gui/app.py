@@ -28,7 +28,7 @@ from .tabs_stats import ClusterTab, CorrelationTab, HistogramTab, PlateauTab
 from .widgets import error_box
 
 APP_NAME = "GZero"
-APP_VERSION = "1.0"
+APP_VERSION = "1.2"
 
 ABOUT = f"""<h3>{APP_NAME} {APP_VERSION}</h3>
 <p>Conversion and statistical analysis of single-molecule break-junction measurements
