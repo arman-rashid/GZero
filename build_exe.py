@@ -42,6 +42,11 @@ def main():
     ]
     if os.path.isdir(docs):
         args += ["--add-data", f"{docs}{os.pathsep}docs"]
+    try:                # optional: plotting in Origin (gzero/origin.py), bundled if installed
+        import originpro  # noqa: F401
+        args += ["--collect-all", "originpro", "--collect-all", "OriginExt"]
+    except ImportError:
+        print("originpro not installed: the exe will not be able to plot in Origin")
     args.append(os.path.join(HERE, "GZero.py"))
     print(" ".join(args))
     subprocess.check_call(args, cwd=HERE)

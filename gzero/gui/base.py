@@ -57,13 +57,18 @@ class AnalysisTab(QWidget):
         """Panels written as individual figures (default: the panels on screen)."""
         return getattr(self, "panels", lambda: [])()
 
+    def figure_prefix(self, prefix: str) -> str:
+        """Start of the figure file names (and Origin graph names)."""
+        return prefix
+
     def export_figures(self, folder: str, prefix: str) -> list[str]:
         """Every panel as its own Nature-format figure in folder/figures."""
         from .. import style
         panels = self.export_panels()
         if not panels:
             return []
-        return style.export_panels(panels, os.path.join(folder, "figures"), prefix, self.main.figure_settings)
+        return style.export_panels(panels, os.path.join(folder, "figures"), self.figure_prefix(prefix),
+                                   self.main.figure_settings)
 
     def has_results(self) -> bool:
         return False

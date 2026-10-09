@@ -6,3 +6,5 @@ pandas>=1.5
 scikit-learn>=1.2
 npTDMS>=1.7
 igor2>=0.5
+# optional, only for plotting in Origin (Windows + Origin 2021 or newer):
+# originpro>=1.1

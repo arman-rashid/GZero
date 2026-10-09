@@ -48,7 +48,10 @@ report. Last line should be `SELFTEST OK`.
 
 File -> Save results writes the results as text files and every plot as a separate figure
 (Nature format: 89 mm wide, Arial 7 pt, pdf + 600 dpi png) into a `figures` subfolder. The
-figure settings are under File -> Figure export settings.
+figure settings are under File -> Figure export settings. There "plot with" can be set to Origin:
+then every plot is rebuilt in Origin instead (data in workbooks, graphs with the same size and
+style, saved as `<name>.opju`). File -> Send plots to Origin does this without saving files. This
+needs Windows, Origin 2021+ and `py -m pip install originpro`.
 
 ## Project layout
 
@@ -78,6 +81,7 @@ Modules:
 | `conversion` | calibration (linear or diode polynomial), single- or dual-stage amplifier (merging Ia and Ib), series resistor correction, filters; column / channel mapping, so conductance, voltage, piezo, current and time given in a file are used as they are |
 | `traces` | splitting recordings into traces, holds, cutting limits, distance axis |
 | `analysis` | histograms, Gaussian fits, plateau length, correlation map, tunnelling decay |
+| `origin` | rebuilding the plots in Origin (OriginLab) from the drawn matplotlib panels |
 | `clustering` | 2D-histogram features, PCA, k-means / Gaussian mixture / Ward / spectral |
 | `noise` | noise power, window selection, scaling exponent n (Theil-Sen, OLS, 2D Gaussian) |
 | `stationarity` | ADF test, same results as statsmodels' adfuller |

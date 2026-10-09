@@ -525,6 +525,7 @@ The text files are tab-separated with one header line, so Origin, Excel and Pyth
 | `<name>_IV_DATA/IV_Curves_F.txt`, `IV_Curves_B.txt` | V/I column pairs for every forward / backward curve | I-V |
 | `<name>_piezo_modulation.txt` | t, logG, amplitudes, beta and phase per window | Piezo modulation |
 | `figures/<name>_<plot>.pdf` and `.png` | Every plot as its own figure (13.1) | every tab |
+| `<name>.opju` | Origin project with the plot data and graphs, if "plot with" includes Origin (13.1) | every tab |
 
 Plateau length and Correlation results get the cluster name added (e.g. `<name>_cluster2_Correlation.txt`) if they were calculated for one cluster.
 
@@ -555,6 +556,10 @@ All of this can be changed under File -> Figure export settings (width, font, fo
 | `modulation_piezo_spectrum`, `modulation_logG_spectrum`, `modulation_beta_vs_G`, `modulation_beta_histogram` | Piezo modulation | Piezo modulation |
 
 The plots on screen are drawn by the same code, so the exported figures look the same, just at journal size. If you want the whole screen view as one picture, use the save button in the plot toolbar.
+
+**Plotting in Origin instead.** If you finish figures in Origin, set "plot with" in File -> Figure export settings to `Origin` (or `matplotlib + Origin` for both). Save results then also puts every plot into Origin: the plotted data go into a workbook (heatmaps into a matrix book) and each plot is rebuilt as an Origin graph with the same page size, axis box, fonts, line widths, colours, axis ranges, legend and labels as the exported figure, so they look the same and stay editable. Histogram steps keep the original bin centres and counts next to the step outline, and heatmaps use the same colour map. Every tab gets its own folder in the Project Explorer, and the project is saved as `<name>.opju` in the results folder. With `Origin` alone no figure files are written. File -> Send plots to Origin does the same for the current plots without saving anything, which is handy for trying settings.
+
+This needs Windows, Origin 2021 or newer and the Python package originpro (`py -m pip install originpro`). If Origin is already open the graphs go into the open project, otherwise Origin is started; either way it stays open. Origin is controlled from the program, so leave it alone until the status bar says it's done (about 2 s per plot). If Origin has a dialog open, for example a licence reminder, close it first.
 
 ### 13.2 Settings and converted files
 

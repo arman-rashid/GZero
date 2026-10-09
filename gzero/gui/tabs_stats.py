@@ -326,9 +326,8 @@ class PlateauTab(AnalysisTab):
     def _draw(self):
         self.plot.show_panels(self.panels(), 2, [2, 1])
 
-    def export_figures(self, folder, prefix):
-        tag = f"{prefix}_{self.res['label']}" if self.res and self.res["label"] != "all" else prefix
-        return super().export_figures(folder, tag)
+    def figure_prefix(self, prefix):
+        return f"{prefix}_{self.res['label']}" if self.res and self.res["label"] != "all" else prefix
 
     def has_results(self):
         return bool(self.res) and self.res["n"] > 0
@@ -406,9 +405,8 @@ class CorrelationTab(AnalysisTab):
         c = an.centers(r["edges"])
         return [figs.correlation_map(c, r["C"], r["s"].color_limit, r["s"].cmap), figs.mean_histogram(c, r["h"])]
 
-    def export_figures(self, folder, prefix):
-        tag = f"{prefix}_{self.res['label']}" if self.res and self.res["label"] != "all" else prefix
-        return super().export_figures(folder, tag)
+    def figure_prefix(self, prefix):
+        return f"{prefix}_{self.res['label']}" if self.res and self.res["label"] != "all" else prefix
 
     def has_results(self):
         return bool(self.res)

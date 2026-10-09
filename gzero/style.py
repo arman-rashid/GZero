@@ -18,8 +18,12 @@ WIDTHS_MM = {"single column (89 mm)": 89.0, "1.5 columns (120 mm)": 120.0, "doub
 PALETTE = ["#0072B2", "#E69F00", "#009E73", "#D55E00", "#CC79A7", "#56B4E9", "#F0E442", "#000000"]
 
 
+PLOT_PROGRAMS = ["matplotlib", "Origin", "matplotlib + Origin"]
+
+
 @dataclass
 class FigureSettings:
+    plot_with: str = "matplotlib"   # figure files, Origin graphs (origin.py) or both
     width: str = "single column (89 mm)"
     font: str = "Arial"
     font_size: float = 7.0          # axis labels; tick labels and legends are 1 pt smaller
@@ -32,6 +36,12 @@ class FigureSettings:
     def format_list(self) -> list[str]:
         out = [f.strip().lower().lstrip(".") for f in str(self.formats).replace(";", ",").split(",")]
         return [f for f in out if f in ("pdf", "png", "tiff", "tif", "svg", "eps", "jpg")] or ["pdf"]
+
+    def figure_files(self) -> bool:
+        return self.plot_with != "Origin"
+
+    def origin_graphs(self) -> bool:
+        return "Origin" in self.plot_with
 
     def width_in(self) -> float:
         return WIDTHS_MM.get(self.width, 89.0) * MM

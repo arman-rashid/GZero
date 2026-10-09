@@ -94,6 +94,7 @@ class MainWindow(QMainWindow):
             ("Open data folder ...", lambda: self.tab("Data & Traces").load_folder(), None),
             (None, None, None),
             ("Save results ...", self.save_results, QKeySequence.Save),
+            ("Send plots to Origin", self.send_to_origin, None),
             (None, None, None),
             ("Figure export settings ...", self.edit_figure_settings, None),
             (None, None, None),
@@ -136,11 +137,16 @@ class MainWindow(QMainWindow):
         dlg.setWindowTitle("Figure export settings")
         form = SettingsForm(
             "Exported figures (Nature format, one plot per file)", self.figure_settings,
-            {"width": "figure width", "font": "font", "font_size": "font size (pt)",
+            {"plot_with": "plot with", "width": "figure width", "font": "font", "font_size": "font size (pt)",
              "line_width": "data line width (pt)", "axes_width": "axis line width (pt)",
              "tick_direction": "tick direction", "formats": "file formats", "dpi": "raster resolution (dpi)"},
-            {"width": list(style.WIDTHS_MM), "tick_direction": ["out", "in"]},
-            {"font_size": "Nature: 5-7 pt. Tick labels and legends are drawn 1 pt smaller.",
+            {"plot_with": style.PLOT_PROGRAMS, "width": list(style.WIDTHS_MM), "tick_direction": ["out", "in"]},
+            {"plot_with": "matplotlib: figure files in the 'figures' folder.\n"
+                          "Origin: the plotted data go into Origin workbooks and every plot becomes an Origin "
+                          "graph of the same size and style; the Origin project is saved in the results folder.\n"
+                          "Needs Windows, Origin 2021 or newer and the originpro package "
+                          "(py -m pip install originpro).",
+             "font_size": "Nature: 5-7 pt. Tick labels and legends are drawn 1 pt smaller.",
              "line_width": "Nature: at least 0.5 pt.",
              "formats": "Comma-separated list of pdf, png, tiff, svg and eps (PDF keeps the text editable).",
              "dpi": "Nature: at least 300 dpi; 600 dpi is recommended for line art."})
@@ -203,7 +209,7 @@ class MainWindow(QMainWindow):
         base = QFileDialog.getExistingDirectory(self, "Choose where to create the results folder", self.last_dir)
         if not base:
             return
-        default = (self.project.recordings[0].name if self.project.recordings else "BJ") + "_Analysis"
+        default = self._result_name()
         name, ok = QInputDialog.getText(self, "Results folder", "Folder name:", text=default)
         if not ok or not name.strip():
             return
@@ -217,16 +223,29 @@ class MainWindow(QMainWindow):
             if ans == QMessageBox.Cancel:
                 return
             overwrite = ans == QMessageBox.Yes
+        fs = self.figure_settings
+        if fs.origin_graphs() and not self._origin_ready():
+            return
         folder = ex.prepare_folder(base, name, overwrite)
-        files, errors = [], []
+        files, errors, origin_groups = [], [], []
         for title, tab in self._tabs.items():
             if not tab.has_results():
                 continue
             try:
                 files += tab.export(folder, name)
-                files += tab.export_figures(folder, name)
+                if fs.figure_files():
+                    files += tab.export_figures(folder, name)
+                if fs.origin_graphs():
+                    origin_groups.append((title, tab.figure_prefix(name), tab.export_panels()))
             except Exception as exc:  # noqa: BLE001
                 errors.append(f"{title}: {exc}")
+        if origin_groups:
+            project = os.path.join(folder, f"{name}.opju")
+            try:
+                self._send_origin(origin_groups, project)
+                files.append(project)
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"Origin: {exc}")
         config = {
             "recordings": [{"name": r.name, "source": r.meta.get("source"), "fs": r.fs, "samples": r.n}
                            for r in self.project.recordings],
@@ -240,6 +259,54 @@ class MainWindow(QMainWindow):
             error_box(self, "Some results could not be saved", "\n".join(errors))
         else:
             QMessageBox.information(self, "Results saved", msg)
+
+    # Origin
+    def _origin_ready(self) -> bool:
+        from .. import origin
+        reason = origin.unavailable_reason()
+        if reason:
+            error_box(self, "Origin", reason)
+        return reason is None
+
+    def _send_origin(self, groups, project_path=None):
+        """Rebuild the panels in Origin (COM: must run in the GUI thread); busy cursor + progress in the status bar."""
+        from PySide6.QtCore import Qt
+        from .. import origin
+
+        def progress(done, total, graph):
+            self.project.status.emit(f"Origin: {done}/{total} {graph}")
+            QApplication.processEvents()
+
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            return origin.send([g for g in groups if g[2]], self.figure_settings, project_path, progress)
+        finally:
+            QApplication.restoreOverrideCursor()
+
+    def send_to_origin(self):
+        """Current plots of every tab with results into Origin, without saving any files."""
+        groups = []
+        for title, tab in self._tabs.items():
+            if tab.has_results():
+                try:
+                    groups.append((title, tab.figure_prefix(self._result_name()), tab.export_panels()))
+                except Exception as exc:  # noqa: BLE001
+                    error_box(self, "Send plots to Origin", f"{title}: {exc}")
+                    return
+        if not any(g[2] for g in groups):
+            error_box(self, "Send plots to Origin", "Nothing to plot yet.")
+            return
+        if not self._origin_ready():
+            return
+        try:
+            names = self._send_origin(groups)
+        except Exception as exc:  # noqa: BLE001
+            error_box(self, "Send plots to Origin", exc)
+            return
+        self.project.status.emit(f"Sent {len(names)} plots to Origin")
+
+    def _result_name(self) -> str:
+        return (self.project.recordings[0].name if self.project.recordings else "BJ") + "_Analysis"
 
     def open_manual(self):
         from PySide6.QtCore import QUrl
