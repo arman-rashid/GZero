@@ -1,10 +1,10 @@
-# Break-Junction Analysis - User Manual
+# GZero - User Manual
 
-Version 1.0, October 2026
+Break-junction analysis software. Version 1.1, October 2026
 
 ## 1. Introduction and installation
 
-I wrote this program to analyse single-molecule break-junction data (MCBJ and STM-BJ) in one place, from the raw TDMS files of the setup to the figures for a paper. It converts the raw signals to conductance, cuts out the single traces, makes the usual histograms, measures plateau lengths, calculates 2D correlation maps, clusters traces and gets the flicker-noise exponent. I-V sweeps and piezo modulation are covered too, and there is a simulator that makes fake data with known answers, which I use to check settings.
+I wrote GZero to analyse single-molecule break-junction data (MCBJ and STM-BJ) in one place, from the raw TDMS files of the setup to the figures for a paper. It converts the raw signals to conductance, cuts out the single traces, makes the usual histograms, measures plateau lengths, calculates 2D correlation maps, clusters traces and gets the flicker-noise exponent. I-V sweeps and piezo modulation are covered too, and there is a simulator that makes fake data with known answers, which I use to check settings.
 
 ### 1.1 The tabs
 
@@ -27,18 +27,18 @@ Windows 10 or 11 (64 bit) for the exe. From Python it should also run on macOS a
 
 ### 1.3 Installing and starting
 
-The simplest way is the exe. Copy the whole `BJ_Analysis` folder somewhere, e.g. `C:\Programs\BJ_Analysis`, and double-click `BJ_Analysis.exe`. Don't move the exe out of the folder, it needs the files next to it. This manual is in `docs\User_Manual.pdf` and also opens from Help -> User manual (F1).
+The simplest way is the exe. Copy the whole `GZero` folder somewhere, e.g. `C:\Programs\GZero`, and double-click `GZero.exe`. Don't move the exe out of the folder, it needs the files next to it. This manual is in `docs\User_Manual.pdf` and also opens from Help -> User manual (F1).
 
-The source code is on GitHub: https://github.com/arman-rashid/break-junction-analysis (Apache License 2.0). To run it from Python (3.9 or newer), go to the project folder (the one with `BJ_Analysis.py`) and run
+The source code is on GitHub: https://github.com/arman-rashid/GZero (Apache License 2.0). To run it from Python (3.9 or newer), go to the project folder (the one with `GZero.py`) and run
 
 ```
 py -m pip install -r requirements.txt
-py BJ_Analysis.py
+py GZero.py
 ```
 
 It needs PySide6, numpy, scipy, matplotlib, pandas, scikit-learn, npTDMS and igor2 (for Igor `.pxp` / `.ibw` files).
 
-If you change the code and want a new exe: `py -m pip install pyinstaller`, then `py build_exe.py` in the same folder. The new version ends up in `dist\BJ_Analysis\`.
+If you change the code and want a new exe: `py -m pip install pyinstaller`, then `py build_exe.py` in the same folder. The new version ends up in `dist\GZero\`.
 
 ### 1.4 The window
 
@@ -585,7 +585,7 @@ You can load several files at once; they're analysed together, the trace numbers
 
 To repeat an old analysis, load the `*_config.json` from its results folder with File -> Load settings, load the same data and run the same tabs.
 
-To check that an installation works, open a command prompt in the program folder and run `BJ_Analysis.exe --selftest report.txt` (or `py BJ_Analysis.py --selftest report.txt`). It runs the simulation, trace detection, histogram fit, clustering, noise analysis, I-V detection and figure export without opening a window and writes the results to `report.txt`. If everything is fine the last line is `SELFTEST OK`.
+To check that an installation works, open a command prompt in the program folder and run `GZero.exe --selftest report.txt` (or `py GZero.py --selftest report.txt`). It runs the simulation, trace detection, histogram fit, clustering, noise analysis, I-V detection and figure export without opening a window and writes the results to `report.txt`. If everything is fine the last line is `SELFTEST OK`.
 
 ## 15. References
 

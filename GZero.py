@@ -1,7 +1,7 @@
 """Start script for the GUI.
 
 Run it directly, or use the exe made by build_exe.py.
-"BJ_Analysis.exe --selftest report.txt" runs everything on simulated data
+"GZero.exe --selftest report.txt" runs everything on simulated data
 without opening a window and writes a short report. I use it to check a
 fresh build.
 """
@@ -12,9 +12,9 @@ import sys
 
 def selftest(report_path):
     import numpy as np
-    from break_junction import analysis as an, clustering as cl, noise as nz, simulation as sim, traces as tr
-    from break_junction import G0, iv
-    from break_junction.conversion import Recording
+    from gzero import analysis as an, clustering as cl, noise as nz, simulation as sim, traces as tr
+    from gzero import G0, iv
+    from gzero.conversion import Recording
 
     lines = []
     rec = sim.simulate(sim.SimulationSettings(n_cycles=120, second_molecule_logG=-2.2, p_second=0.4))
@@ -36,7 +36,7 @@ def selftest(report_path):
     I = G0 * 1e-3 * V
     curves = iv.curves_from_recording(Recording("iv", 1e4, np.full(len(t), 1e-3), None, V, I), iv.IVSettings())
     lines.append(f"iv curves {len(curves)}")
-    from break_junction import bj_io, conversion as cv
+    from gzero import bj_io, conversion as cv
     logG = np.linspace(0.5, -6, 5000)
     Vb = 0.1 + 0.01 * np.sin(np.arange(5000) / 50)
     I = 10 ** logG * G0 * Vb
@@ -49,7 +49,7 @@ def selftest(report_path):
     import igor2.packed  # noqa: F401 - must be bundled for .pxp files
     lines.append(f"dual-stage columns max error {err:.1e} decades, igor2 ok")
     import tempfile
-    from break_junction import figures, style
+    from gzero import figures, style
     zc, gc, H2 = an.hist2d(good, an.HistSettings())
     panels = [figures.histogram_1d(x, y, "per trace", "All accepted", len(good)),
               figures.histogram_2d(zc, gc, H2, "per trace")] + figures.noise(r, sc, ns, H[0], 0)
@@ -75,6 +75,6 @@ if __name__ == "__main__":
                 fh.write("SELFTEST FAILED\n" + traceback.format_exc())
             code = 1
         sys.exit(code)
-    from break_junction.gui.app import main
+    from gzero.gui.app import main
 
     sys.exit(main())

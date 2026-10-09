@@ -75,7 +75,7 @@ def build():
     printer.setOutputFileName(PDF)
     printer.setPageLayout(QPageLayout(QPageSize(QPageSize.A4), QPageLayout.Portrait,
                                       QMarginsF(18, 16, 18, 16), QPageLayout.Millimeter))
-    printer.setDocName("Break-Junction Analysis - User Manual")
+    printer.setDocName("GZero - User Manual")
     doc.setPageSize(QSizeF(printer.pageRect(QPrinter.Point).size()))
     doc.print_(printer)
     print(f"wrote {PDF}")

@@ -3,7 +3,7 @@
     py -m pip install pyinstaller
     py build_exe.py
 
-Everything ends up in dist/BJ_Analysis/. Copy the whole folder, the exe
+Everything ends up in dist/GZero/. Copy the whole folder, the exe
 alone won't run.
 """
 
@@ -20,12 +20,12 @@ def main():
     args = [
         sys.executable, "-m", "PyInstaller",
         "--noconfirm", "--clean", "--windowed",
-        "--name", "BJ_Analysis",
+        "--name", "GZero",
         "--distpath", os.path.join(HERE, "dist"),
         "--workpath", os.path.join(HERE, "build"),
         "--specpath", os.path.join(HERE, "build"),
         "--paths", HERE,
-        "--collect-submodules", "break_junction",
+        "--collect-submodules", "gzero",
         "--hidden-import", "igor2.packed",
         "--hidden-import", "igor2.binarywave",
         "--hidden-import", "sklearn.utils._typedefs",
@@ -42,14 +42,14 @@ def main():
     ]
     if os.path.isdir(docs):
         args += ["--add-data", f"{docs}{os.pathsep}docs"]
-    args.append(os.path.join(HERE, "BJ_Analysis.py"))
+    args.append(os.path.join(HERE, "GZero.py"))
     print(" ".join(args))
     subprocess.check_call(args, cwd=HERE)
     # also place the manual next to the exe so it is easy to find
-    out = os.path.join(HERE, "dist", "BJ_Analysis")
+    out = os.path.join(HERE, "dist", "GZero")
     if os.path.isdir(docs):
         shutil.copytree(docs, os.path.join(out, "docs"), dirs_exist_ok=True)
-    print(f"\nBuilt: {os.path.join(out, 'BJ_Analysis.exe')}")
+    print(f"\nBuilt: {os.path.join(out, 'GZero.exe')}")
 
 
 if __name__ == "__main__":

@@ -8,10 +8,10 @@ import sys
 
 if __name__ == "__main__" and not __package__:
     # Started as a plain script (e.g. PyCharm "Run" on this file): relative imports
-    # need the package context, so re-launch as  python -m break_junction.
+    # need the package context, so re-launch as  python -m gzero.
     import runpy
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    runpy.run_module("break_junction", run_name="__main__")
+    runpy.run_module("gzero", run_name="__main__")
     sys.exit()
 
 from PySide6.QtCore import QSettings
@@ -27,7 +27,7 @@ from .tabs_noise import IVTab, ModulationTab, NoiseTab
 from .tabs_stats import ClusterTab, CorrelationTab, HistogramTab, PlateauTab
 from .widgets import error_box
 
-APP_NAME = "Break-Junction Analysis"
+APP_NAME = "GZero"
 APP_VERSION = "1.0"
 
 ABOUT = f"""<h3>{APP_NAME} {APP_VERSION}</h3>
@@ -54,7 +54,12 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"{APP_NAME} {APP_VERSION}")
-        self.settings = QSettings("BJAnalysis", "BJAnalysis")
+        self.settings = QSettings("GZero", "GZero")
+        if not self.settings.allKeys():
+            # first start after the rename: take over what the old version stored
+            old = QSettings("BJAnalysis", "BJAnalysis")
+            for key in old.allKeys():
+                self.settings.setValue(key, old.value(key))
         self.last_dir = self.settings.value("last_dir", os.path.expanduser("~"))
         self.project = Project()
         self.figure_settings = self._load_figure_settings()
