@@ -8,6 +8,12 @@ The manual is `docs/User_Manual.pdf` (Help -> User manual in the program).
 
 ## Getting it
 
+**Windows, no Python needed:** download `BJ_Analysis-v1.0-windows-x64.zip` from the
+[latest release](https://github.com/arman-rashid/break-junction-analysis/releases/latest), unzip it and
+double-click `BJ_Analysis\BJ_Analysis.exe`. Keep the folder together.
+
+**Source code:**
+
 ```
 git clone https://github.com/arman-rashid/break-junction-analysis.git
 cd break-junction-analysis
