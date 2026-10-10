@@ -31,11 +31,18 @@ def selftest(report_path):
     G, NP = r.arrays()
     sc = nz.scaling_exponent(G, NP, ns)
     lines.append(f"noise accepted {len(G)} n_TSE {sc['n_tse']:.3f} n_OLS {sc['n_ols']:.3f} (truth 1.5)")
+    from gzero import ivmodels as ivm, junctions as jn
+    jr = jn.analyse(good, jn.JunctionSettings())
+    lines.append(f"junction yield {100 * jr.yield_()[0]:.1f} % (70 % molecular; the -2.2 class sits at the window edge)")
     t = np.arange(20000) / 1e4
-    V = 0.5 * (2 / np.pi) * np.arcsin(np.sin(2 * np.pi * 2 * t))
-    I = G0 * 1e-3 * V
+    V = 1.5 * (2 / np.pi) * np.arcsin(np.sin(2 * np.pi * 2 * t))
+    I = ivm.slm_current(V, 0.8, 0.02)
     curves = iv.curves_from_recording(Recording("iv", 1e4, np.full(len(t), 1e-3), None, V, I), iv.IVSettings())
     lines.append(f"iv curves {len(curves)}")
+    mr = ivm.analyse(curves, ivm.IVModelSettings(), iv.mean_curve)
+    f = mr.mean["forward"][2]
+    lines.append(f"SLM eps0 {f.eps0:.3f} eV Gamma {1e3 * f.Gamma:.1f} meV (truth 0.800, 20.0); "
+                 f"eps0 from V_t {np.nanmedian(mr.eps_tvs):.3f} eV")
     from gzero import bj_io, conversion as cv
     logG = np.linspace(0.5, -6, 5000)
     Vb = 0.1 + 0.01 * np.sin(np.arange(5000) / 50)
@@ -52,7 +59,8 @@ def selftest(report_path):
     from gzero import figures, style
     zc, gc, H2 = an.hist2d(good, an.HistSettings())
     panels = [figures.histogram_1d(x, y, "per trace", "All accepted", len(good)),
-              figures.histogram_2d(zc, gc, H2, "per trace")] + figures.noise(r, sc, ns, H[0], 0)
+              figures.histogram_2d(zc, gc, H2, "per trace")] + figures.noise(r, sc, ns, H[0], 0) \
+        + figures.junctions(jr) + figures.iv_models(mr, ivm.slm_current, ivm.fowler_nordheim)
     with tempfile.TemporaryDirectory() as tmp:
         files = style.export_panels(panels, tmp, "selftest", style.FigureSettings())
         sizes = [os.path.getsize(f) for f in files]

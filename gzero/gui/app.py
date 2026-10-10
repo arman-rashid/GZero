@@ -24,11 +24,11 @@ from .. import export as ex
 from .project import Project
 from .tabs_data import ConvertTab, DataTab, SimulationTab
 from .tabs_noise import IVTab, ModulationTab, NoiseTab
-from .tabs_stats import ClusterTab, CorrelationTab, HistogramTab, PlateauTab
+from .tabs_stats import ClusterTab, CorrelationTab, HistogramTab, JunctionTab, PlateauTab
 from .widgets import error_box
 
 APP_NAME = "GZero"
-APP_VERSION = "1.2"
+APP_VERSION = "1.3"
 
 ABOUT = f"""<h3>{APP_NAME} {APP_VERSION}</h3>
 <p>Conversion and statistical analysis of single-molecule break-junction measurements
@@ -40,13 +40,17 @@ series-resistor compensation, filters, .cvr export.</li>
 cutting limits, zero set, trace browser with manual good/bad marking.</li>
 <li><b>Histograms</b>: 1D log-G and 2D conductance-distance histograms, multi-Gaussian fits.</li>
 <li><b>Plateau length</b>: up to 3 windows, statistics, tunnelling-decay calibration.</li>
+<li><b>Junction statistics</b>: per-trace plateau detection, junction yield (Kamenetska 2009),
+plateau conductance and its drift over the measurement.</li>
 <li><b>Correlation</b>: 2D cross-correlation histograms (Makk et al. 2012).</li>
 <li><b>Clustering</b>: PCA + k-means / Gaussian mixture / agglomerative / spectral on per-trace 2D
 histograms (Lemmer 2016, Cabosart 2019).</li>
 <li><b>Flicker noise</b>: noise power vs G with scaling exponent n (NP ~ G<sup>n</sup>;
 n ~ 1 through-bond, n ~ 2 through-space): bell-shaped 2D Gaussian analysis (Adak et al.,
 Nano Lett. 2015) and the robust ADF + Theil-Sen method (Morris et al., J. Phys. Chem. C 2025).</li>
-<li><b>I-V</b>, <b>Piezo modulation</b> (lock-in beta), <b>Simulation</b> (synthetic ground truth).</li>
+<li><b>I-V</b>: sweeps, dI/dV, single-level model fit (Zotti 2010) and transition voltage
+spectroscopy (Beebe 2006, Baldea 2012).</li>
+<li><b>Piezo modulation</b> (lock-in beta), <b>Simulation</b> (synthetic ground truth).</li>
 </ul>"""
 
 
@@ -66,7 +70,7 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
         self._tabs = {}
-        for cls in (ConvertTab, DataTab, HistogramTab, PlateauTab, CorrelationTab, ClusterTab,
+        for cls in (ConvertTab, DataTab, HistogramTab, PlateauTab, JunctionTab, CorrelationTab, ClusterTab,
                     NoiseTab, IVTab, ModulationTab, SimulationTab):
             tab = cls(self.project, self)
             self._tabs[tab.title] = tab

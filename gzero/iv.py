@@ -110,8 +110,15 @@ def mean_curve(curves: list[IVCurve], n: int = 200):
         cs = [c for c in curves if c.direction == d]
         if not cs:
             continue
-        lo = max(c.V.min() for c in cs)
-        hi = min(c.V.max() for c in cs)
+        # the typical range; partial sweeps (start and end of the recording) are left out
+        lo = float(np.median([c.V.min() for c in cs]))
+        hi = float(np.median([c.V.max() for c in cs]))
+        tol = 0.02 * (hi - lo)
+        cs = [c for c in cs if c.V.min() <= lo + tol and c.V.max() >= hi - tol]
+        if not cs:
+            continue
+        lo = max(lo, max(c.V.min() for c in cs))
+        hi = min(hi, min(c.V.max() for c in cs))
         if hi <= lo:
             continue
         vg = np.linspace(lo, hi, n)

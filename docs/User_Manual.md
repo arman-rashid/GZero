@@ -1,10 +1,10 @@
 # GZero - User Manual
 
-Break-junction analysis software. Version 1.1, October 2026
+Break-junction analysis software. Version 1.3, October 2026
 
 ## 1. Introduction and installation
 
-I wrote GZero to analyse single-molecule break-junction data (MCBJ and STM-BJ) in one place, from the raw TDMS files of the setup to the figures for a paper. It converts the raw signals to conductance, cuts out the single traces, makes the usual histograms, measures plateau lengths, calculates 2D correlation maps, clusters traces and gets the flicker-noise exponent. I-V sweeps and piezo modulation are covered too, and there is a simulator that makes fake data with known answers, which I use to check settings.
+I wrote GZero to analyse single-molecule break-junction data (MCBJ and STM-BJ) in one place, from the raw TDMS files of the setup to the figures for a paper. It converts the raw signals to conductance, cuts out the single traces, makes the usual histograms, measures plateau lengths, calculates 2D correlation maps, clusters traces and gets the flicker-noise exponent. It also tells you how often a molecule actually bridged the gap (the junction yield) and whether the conductance drifted during the run. For I-V sweeps it fits the single-level model and finds the transition voltage. Piezo modulation is covered too, and there is a simulator that makes fake data with known answers, which I use to check settings.
 
 ### 1.1 The tabs
 
@@ -14,10 +14,11 @@ I wrote GZero to analyse single-molecule break-junction data (MCBJ and STM-BJ) i
 | Data & Traces | Loading files, finding and cutting traces, looking through them, marking bad ones |
 | Histograms | 1D log G histogram, 2D conductance-distance histogram, Gaussian fits |
 | Plateau length | How long the molecular plateau is, in up to three windows; tunnelling decay |
+| Junction statistics | Which traces have a molecular plateau (junction yield), the conductance of each plateau, drifts over the measurement |
 | Correlation | 2D cross-correlation of conductance values within traces |
 | Clustering | PCA and clustering of traces into groups |
 | Flicker noise | Noise power against conductance and the scaling exponent n |
-| I-V | Forward and backward bias sweeps, dI/dV, 2D I-V histograms |
+| I-V | Forward and backward bias sweeps, dI/dV, 2D I-V histograms, single-level model fit, transition voltage spectroscopy |
 | Piezo modulation | Decay constant beta from a modulated piezo |
 | Simulation | Synthetic recordings |
 
@@ -58,7 +59,7 @@ This is the short version of a normal analysis, from a raw file to a histogram a
 6. Put *fit from* and *fit to* around the molecular peak, choose how many Gaussians, click Fit peaks (5).
 7. In Plateau length, set window 1 around the peak and click Calculate (6).
 8. In Flicker noise, click the Morris et al. 2025 preset, then Peak from histogram fit, then Run noise analysis. n and its error appear under the button (9).
-9. Correlation and Clustering if you need them (7, 8).
+9. Correlation and Clustering if you need them (7, 8). Junction statistics gives the yield and checks for drift (6.4).
 10. File -> Save results (Ctrl+S), choose where and give the folder a name. Everything goes in there: text files, figures, settings (13).
 
 If you just want to try the program, go to Simulation and click Generate. You get a fake data set where you know the right answers, and you can see if the analysis finds them (12).
@@ -262,7 +263,9 @@ The program remembers the last fit; the Flicker noise tab uses it for the peak w
 
 If a peak has a shoulder or a long tail, two Gaussians usually describe it better than forcing one. And when you compare samples, compare the per-trace histograms, not raw counts.
 
-## 6. Plateau length tab
+## 6. Plateau length and junction statistics
+
+This chapter covers two tabs: Plateau length (6.1-6.3) and Junction statistics (6.4).
 
 The plateau length is how far a junction can be pulled while the molecule is still bridging the gap. Compared with the length of the molecule it tells you whether junctions break when the molecule is fully stretched. The tab measures it in up to three conductance windows and also fits the tunnelling decay, which I use to calibrate the distance.
 
@@ -292,6 +295,46 @@ Keep in mind that the real junction is longer than the measured length by the sn
 For every trace log G is fitted linearly against distance in the tunnelling range, which gives beta in G \~ exp(-beta z). The right plot is the beta histogram, the median is written under the table.
 
 For gold in vacuum beta is about 20 per nm (one decade of conductance per \~0.1 nm), in solvents it's lower; put your value in *expected beta*. The label then tells you what to multiply the *displacement ratio* (4.5) by, measured beta / expected beta. Change the ratio and detect the traces again.
+
+### 6.4 Junction statistics tab
+
+The 1D histogram tells you where the molecular peak is, but not how many traces it came from. A peak built from 90 % of the traces and one built from 10 % can look the same once you normalise per trace. The Junction statistics tab looks at the traces one at a time and asks three questions: did a molecule bridge the gap, for how long, and at what conductance? From the answers you get the junction yield (the fraction of traces with a molecular plateau, Kamenetska et al. 2009). You also see whether the yield or the conductance changed while you were measuring.
+
+**How a plateau is found.** A trace "forms a junction" if it stays flat inside the molecular window for at least *min plateau*. Flat means the local slope |d log G / dz| is below *max slope*. I added the slope test because without it every trace counts. A pure tunnelling trace falls through a two-decade window in about 0.1-0.2 nm, and with the plain `span` length from 6.1 that already looks like a short plateau. Tunnelling drops by beta / ln 10 decades per nm, so about 9 decades/nm for gold in vacuum and 4-5 in solvents. Molecular plateaus usually fall by well under one decade per nm. The default of 2 decades/nm sits between the two.
+
+The slope at each point is the change in log G between z - w/2 and z + w/2, divided by w, where w is *slope over*. Points near the ends of a trace, where that interval doesn't fit, never count as flat.
+
+For each trace you get:
+
+- the flat length: the summed distance of all flat points inside the window,
+- the plateau conductance: the median log G of those flat points,
+- yes/no: does the flat length reach *min plateau*?
+
+| Setting | Meaning | Default |
+| --- | --- | --- |
+| traces | All accepted traces or one cluster | all |
+| molecular window from / to | log G range where you expect the molecule | -4.5 / -2.5 |
+| flat if slope below | Slope limit in decades/nm | 2 |
+| slope over | Distance over which the slope is measured | 0.05 nm |
+| junction if flat length above | Minimum flat length for a junction | 0.1 nm |
+| traces per block | Consecutive traces grouped for the plots against trace number | 100 |
+| conductance bins | Bins of the plateau conductance histogram | 60 |
+
+Use peak from histogram fit sets the window to the fitted peak centre +/- 3 sigma (fit the peak in the Histograms tab first). Then click Calculate.
+
+**Results.** The text under the button gives the number of traces with a plateau, the yield with its binomial standard error sqrt(p(1-p)/N), and the median plateau conductance and length. With at least three blocks it also gives the conductance drift in decades per 1000 traces (a straight-line fit to the block medians) and the range of the block yields. The plots are:
+
+| Plot | What it shows |
+| --- | --- |
+| Plateau conductance histogram | One entry per junction: the median log G of its plateau. Narrower than the 1D histogram, because the tunnelling background is gone |
+| Conductance vs trace number | Every plateau conductance plus the median of each block. A slope means the junction changed during the run (electrode wear, solvent evaporating, the surface filling up) |
+| Yield vs trace number | Yield per block with error bars and the overall yield as a dashed line |
+| Flat plateau length histogram | Flat length of every trace, with the threshold marked. A clear gap near the threshold means the setting is sensible |
+| Length vs conductance | One point per junction. A tilt shows that longer-stretched junctions sit at another conductance, e.g. two binding geometries |
+
+**Choosing the settings.** Look at the flat length histogram first. Tunnelling-only traces pile up near zero and molecular traces form a second hump. Put *min plateau* in the dip between them. If there is no dip, the yield depends on your threshold and you should say which one you used. On simulated data (12) with 70 % molecular traces I get 68.5 +/- 3.3 %, and with 30 % I get 29.0 +/- 3.2 %.
+
+A note on the denominator: the yield is per accepted trace. Traces rejected in Data & Traces (4.4) aren't counted, so loose or strict cutting limits change it. Report the yield together with the cutting limits.
 
 ## 7. Correlation tab
 
@@ -433,7 +476,11 @@ As a check I ran it on simulated data with n = 1.5 and got n\_TSE = 1.52 +/- 0.0
 
 ## 10. I-V tab
 
-This tab is for bias sweeps. It cuts a recording into forward and backward I-V curves and makes histograms of them. For that the bias has to be recorded over time, so you need a TDMS file with a bias channel or a text or Igor file with a *voltage column* (4.2). With constant bias you just get "No bias sweeps were found".
+This tab is for bias sweeps. It cuts a recording into forward and backward I-V curves, makes histograms of them and, if you want, fits a transport model to them (10.2, 10.3).
+
+### 10.1 Finding the sweeps
+
+This first part cuts the recording into forward and backward curves and makes histograms of them. For that the bias has to be recorded over time, so you need a TDMS file with a bias channel or a text or Igor file with a *voltage column* (4.2). With constant bias you just get "No bias sweeps were found".
 
 The bias is smoothed and its turning points found (peaks and valleys at least *min sweep amplitude* apart). Every monotonic piece between two turning points is one curve, forward if the bias goes up and backward if it goes down. The current of each curve is smoothed with a Savitzky-Golay filter and dI/dV is the ratio of the filtered derivatives of I and V.
 
@@ -444,9 +491,67 @@ The bias is smoothed and its turning points found (peaks and valleys at least *m
 | smoothing points, polynomial order | Savitzky-Golay window and order for the current and dI/dV | 11, 2 |
 | curve must reach V below / above | Only keeps curves that cover this range; empty = off | off |
 | V bins, I bins | Resolution of the 2D histograms | 100, 100 |
-| log I histogram | Histogram of log10 | I |
+| log \|I\| histogram | Histograms log10 \|I\| instead of I | on |
 
-Top left you see up to 200 curves (forward blue, backward orange) with the averaged forward and backward curves; the other three plots are 2D histograms against V of log I, of log(G/G0) with G = I/V, and of log(dI/dV / G0). The curves are saved as V/I column pairs in `IV_DATA/IV_Curves_F.txt` and `IV_Curves_B.txt` (13).
+Top left you see up to 200 curves (forward blue, backward orange) with the averaged forward and backward curves. The other three plots are 2D histograms against V of log I, of log(G/G0) with G = I/V, and of log(dI/dV / G0). The curves are saved as V/I column pairs in `IV_DATA/IV_Curves_F.txt` and `IV_Curves_B.txt` (13).
+
+The mean curves only use sweeps that cover the typical bias range. The half sweeps at the start and end of a recording are left out of the average, because they'd shrink the common range to nothing. They are still in the histograms and in the fits of single curves.
+
+### 10.2 Single-level model
+
+Most I-V curves of single-molecule junctions can be described by one molecular level. It sits at energy eps0 from the Fermi level of the electrodes and is broadened by its coupling Gamma to each electrode. The transmission is a Lorentzian, and at zero temperature the Landauer current has a closed form:
+
+```latex
+I(V) = N\,G_0\,\Gamma \left[\arctan\frac{V/2 - \varepsilon(V)}{\Gamma} + \arctan\frac{V/2 + \varepsilon(V)}{\Gamma}\right], \qquad \varepsilon(V) = \varepsilon_0 + a V
+```
+
+Energies are in eV and V in volts, so G0 times an energy in eV is directly a current in A. Both electrodes are coupled equally (Gamma_L = Gamma_R = Gamma), N is the number of molecules in parallel (keep it 1) and a describes an asymmetric junction where the level moves with the bias. At low bias the model gives G/G0 = N Gamma^2 / (eps0^2 + Gamma^2). This is the form used, for example, by Zotti et al. (2010) to compare anchoring groups.
+
+Click Fit single-level model + TVS after Analyse I-V. The fit is a least-squares fit of I (scaled by its maximum), started from four values of eps0. The best one is kept. Every curve is fitted (up to *fit at most N single curves*), and so are the mean forward and backward curves.
+
+| Setting | Meaning | Default |
+| --- | --- | --- |
+| fit only \|V\| below | Restricts the fit to low bias; empty = whole curve | empty |
+| fit asymmetry a | Also fits a; off means a = 0 (symmetric junction) | off |
+| molecules in parallel N | N in the formula | 1 |
+| TVS: ignore \|V\| below | See 10.3 | 0.05 V |
+| fit at most N single curves | Fitting takes a few ms per curve | 500 |
+
+Some things to keep in mind:
+
+- eps0 comes out as a positive number. The model can't tell HOMO from LUMO transport, because both give the same I-V. For that you need thermopower or theory.
+- When the bias range is well below eps0, the curve is almost linear plus a small cubic term. eps0 and Gamma are then strongly correlated, and the errors (from the fit covariance) get large. Look at the eps0 vs Gamma scatter: a long diagonal streak means the data can't separate the two.
+- The model assumes zero temperature, one level, and a level that doesn't depend on the bias beyond a V. This works when eps0 and Gamma are much larger than kT (about 25 meV). If those assumptions don't hold, the model can still fit the curve nicely while eps0 and Gamma no longer mean what they seem to.
+
+### 10.3 Transition voltage spectroscopy (TVS)
+
+If you plot ln(|I|/V^2) against 1/V (a Fowler-Nordheim plot), I-V curves of molecular junctions have a minimum. Beebe et al. (2006) introduced it as the transition voltage V_t. It is the same as the maximum of V^2/|I|. V_t needs no fitting and is less sensitive to noise than the curvature of I(V), which is why it is so widely used.
+
+For each curve and each polarity the program averages I in 60 bias bins above *TVS: ignore |V| below*, finds the maximum of V^2/|I| and refines it with a parabola through the three highest points. If the maximum is at the edge of the measured range, the bias didn't go far enough, and that V_t is left empty.
+
+In the single-level model with Gamma << eps0, the two transition voltages give eps0 and a in closed form (Baldea 2012):
+
+```latex
+\varepsilon_0 = \frac{2\,|V_t^+ V_t^-|}{\sqrt{(V_t^+)^2 + (V_t^-)^2 + \frac{10}{3}|V_t^+ V_t^-|}}, \qquad a = \frac{(V_t^+ + V_t^-)\,\varepsilon_0}{4\,|V_t^+ V_t^-|}
+```
+
+For a symmetric junction this reduces to eps0 = (sqrt(3)/2) V_t, about 0.87 V_t. If only one polarity has a V_t, that formula is used. I checked both against the exact model: for eps0 = 0.8 eV, Gamma = 10 meV and a = 0.1, the curves give V_t+ = 1.19 V and V_t- = -0.75 V, and back eps0 = 0.800 eV and a = 0.100.
+
+Comparing the eps0 from TVS with the eps0 from the fit is a useful check. If they disagree a lot, the curves probably aren't single-level-like (several levels, strong asymmetry, or heating at high bias).
+
+### 10.4 Plots and what to report
+
+The fit and TVS add five plots to the I-V tab:
+
+| Plot | What it shows |
+| --- | --- |
+| SLM fit | Mean forward and backward curves (dots) with the fitted model (lines) |
+| Fowler-Nordheim | ln(\|I\|/V^2) vs 1/V of the mean curves, positive bias solid and negative dashed, V_t as dotted lines |
+| Transition voltage histogram | V_t+ and \|V_t-\| of all curves |
+| SLM parameters | eps0 against Gamma (log scale) for every fitted curve |
+| eps0 histogram | eps0 from the fits and from V_t |
+
+Report eps0 and Gamma with their spread over the single curves (the medians are in the text). Say whether a was fitted and give the bias range of the fit. For TVS, give both polarities. The numbers per curve are in `<name>_IV_models.txt` and the summary is in `<name>_IV_models_summary.txt` (13).
 
 ## 11. Piezo modulation tab
 
@@ -523,11 +628,16 @@ The text files are tab-separated with one header line, so Origin, Excel and Pyth
 | `<name>_Noise_bell_hist.txt` | Bell histogram as a matrix | Flicker noise |
 | `<name>_Noise_summary.txt` | n with errors for all estimators, bell parameters, counts, settings | Flicker noise |
 | `<name>_IV_DATA/IV_Curves_F.txt`, `IV_Curves_B.txt` | V/I column pairs for every forward / backward curve | I-V |
+| `<name>_IV_models.txt` | Per curve: low-bias G, V_t+, V_t-, eps0 and a from TVS, eps0, Gamma and a from the fit with errors, R^2 | I-V, after the model fit |
+| `<name>_IV_models_summary.txt` | Fits of the mean curves, medians, settings | I-V, after the model fit |
+| `<name>_junctions.txt` | Per trace: junction yes/no, flat plateau length, plateau log G | Junction statistics |
+| `<name>_junction_blocks.txt` | Per block: mean trace number, yield, its error, median plateau log G, traces | Junction statistics |
+| `<name>_junction_summary.txt` | Yield, medians, drift, settings | Junction statistics |
 | `<name>_piezo_modulation.txt` | t, logG, amplitudes, beta and phase per window | Piezo modulation |
 | `figures/<name>_<plot>.pdf` and `.png` | Every plot as its own figure (13.1) | every tab |
 | `<name>.opju` | Origin project with the plot data and graphs, if "plot with" includes Origin (13.1) | every tab |
 
-Plateau length and Correlation results get the cluster name added (e.g. `<name>_cluster2_Correlation.txt`) if they were calculated for one cluster.
+Plateau length, Junction statistics and Correlation results get the cluster name added (e.g. `<name>_cluster2_Correlation.txt`) if they were calculated for one cluster.
 
 ### 13.1 Figures
 
@@ -552,7 +662,9 @@ All of this can be changed under File -> Figure export settings (width, font, fo
 | `correlation_map`, `correlation_mean_histogram` | Correlation map and mean histogram | Correlation |
 | `clustering_PCA_scree`, `clustering_PCA_scatter`, `clustering_logG_histograms`, `clustering_silhouette_scan`, `clustering_clusterN_2D_histogram` | PCA and cluster results | Clustering |
 | `noise_example_segment`, `noise_PSD`, `noise_scaling_fits`, `noise_bell_histogram`, `noise_correlation_vs_n`, `noise_fit_residuals` | Flicker noise | Flicker noise |
+| `junction_plateau_conductance_histogram`, `junction_conductance_vs_trace`, `junction_yield_vs_trace`, `junction_plateau_length_histogram`, `junction_length_vs_conductance` | Junction yield and plateau statistics | Junction statistics |
 | `IV_curves`, `IV_current_histogram`, `IV_conductance_histogram`, `IV_dIdV_histogram` | I-V curves and histograms | I-V |
+| `IV_SLM_fit`, `IV_Fowler_Nordheim`, `IV_transition_voltage_histogram`, `IV_SLM_parameters`, `IV_eps0_histogram` | Single-level model and TVS | I-V, after the model fit |
 | `modulation_piezo_spectrum`, `modulation_logG_spectrum`, `modulation_beta_vs_G`, `modulation_beta_histogram` | Piezo modulation | Piezo modulation |
 
 The plots on screen are drawn by the same code, so the exported figures look the same, just at journal size. If you want the whole screen view as one picture, use the save button in the plot toolbar.
@@ -580,6 +692,10 @@ File -> Save settings writes all settings to a JSON file and File -> Load settin
 | OLS and Theil-Sen give different n | There are outliers. Use Theil-Sen, look at the residual plot, maybe switch on the ADF test. |
 | "No piezo modulation was found" | There's no modulation in the file or it's too weak. Type in the *modulation frequency* if you know it. |
 | "No bias sweeps were found" | The bias is constant; I-V needs sweeps. |
+| No transition voltage (empty V_t) | The maximum of V^2/\|I\| is at the end of the sweep, so the bias didn't reach V_t. Sweep further if the junction survives it, or rely on the model fit. |
+| SLM errors huge, eps0 and Gamma on a diagonal streak | The bias range is far below eps0, so the curves can't separate eps0 and Gamma. Report the low-bias conductance instead, or measure to higher bias. |
+| Junction yield close to 100 % for a blank measurement | Tunnelling counts as plateau: lower *flat if slope below* or raise *junction if flat length above* (6.4). |
+| Junction yield close to 0 % although there's a clear peak | The plateaus are tilted more than *flat if slope below*, or the window misses them; use Use peak from histogram fit. |
 | Clustering changes from run to run | Keep the *random seed* fixed (it's 0 by default). |
 | Window empty or tiny on a 4K screen | Set the Windows display scaling to 150-200 %. |
 | "No column ... available: ..." | The column name or number isn't in the file. The message lists what is there; Show columns (4.1) does too. Numbers start at 0. |
@@ -590,7 +706,7 @@ You can load several files at once; they're analysed together, the trace numbers
 
 To repeat an old analysis, load the `*_config.json` from its results folder with File -> Load settings, load the same data and run the same tabs.
 
-To check that an installation works, open a command prompt in the program folder and run `GZero.exe --selftest report.txt` (or `py GZero.py --selftest report.txt`). It runs the simulation, trace detection, histogram fit, clustering, noise analysis, I-V detection and figure export without opening a window and writes the results to `report.txt`. If everything is fine the last line is `SELFTEST OK`.
+To check that an installation works, open a command prompt in the program folder and run `GZero.exe --selftest report.txt` (or `py GZero.py --selftest report.txt`). It runs the simulation, trace detection, histogram fit, clustering, noise analysis, junction yield, I-V detection, the single-level fit and TVS on a simulated curve, and the figure export without opening a window and writes the results to `report.txt`. If everything is fine the last line is `SELFTEST OK`.
 
 ## 15. References
 
@@ -636,15 +752,27 @@ I checked entries 1-24 against Crossref on 8 October 2026. The table at the end 
 24. P. Virtanen et al., "SciPy 1.0: fundamental algorithms for scientific computing in Python", *Nature Methods* 17, 261-272 (2020). [doi:10.1038/s41592-019-0686-2](https://doi.org/10.1038/s41592-019-0686-2)
 25. F. Pedregosa et al., "Scikit-learn: machine learning in Python", *J. Machine Learning Research* 12, 2825-2830 (2011). No DOI; [jmlr.org](https://jmlr.org/papers/v12/pedregosa11a.html). Not in Crossref and not re-checked.
 
-### 15.6 What to cite for each analysis
+### 15.6 Junction statistics and I-V models
+
+26. M. Kamenetska, M. Koentopp, A. C. Whalley, Y. S. Park, M. L. Steigerwald, C. Nuckolls, M. S. Hybertsen, L. Venkataraman, "Formation and evolution of single-molecule junctions", *Phys. Rev. Lett.* 102, 126803 (2009). [doi:10.1103/PhysRevLett.102.126803](https://doi.org/10.1103/PhysRevLett.102.126803) Junction formation probability and plateau length with molecular length.
+27. L. A. Zotti, T. Kirchner, J.-C. Cuevas, F. Pauly, T. Huhn, E. Scheer, A. Erbe, "Revealing the role of anchoring groups in the electrical conduction through single-molecule junctions", *Small* 6, 1529-1535 (2010). [doi:10.1002/smll.200902227](https://doi.org/10.1002/smll.200902227) Single-level model fits of MCBJ I-V curves.
+28. J. M. Beebe, B. Kim, J. W. Gadzuk, C. D. Frisbie, J. G. Kushmerick, "Transition from direct tunneling to field emission in metal-molecule-metal junctions", *Phys. Rev. Lett.* 97, 026801 (2006). [doi:10.1103/PhysRevLett.97.026801](https://doi.org/10.1103/PhysRevLett.97.026801) Transition voltage spectroscopy.
+29. I. Baldea, "Ambipolar transition voltage spectroscopy: analytical results and experimental agreement", *Phys. Rev. B* 85, 035442 (2012). [doi:10.1103/PhysRevB.85.035442](https://doi.org/10.1103/PhysRevB.85.035442) eps0 and the bias asymmetry from V_t+ and V_t-.
+
+I took the details of 26-29 from the publishers' and university repositories' pages in October 2026. They haven't been re-checked against Crossref like 1-24.
+
+### 15.7 What to cite for each analysis
 
 | Analysis in this program | Cite |
 | --- | --- |
 | Conductance histograms, plateau length | 2, 3 (technique); 4 or 5 (review) |
+| Junction yield, plateau conductance per trace | 26 |
 | 2D cross-correlation | 11 |
 | Clustering | 12, 13; 15 or 14 for related methods |
 | Flicker noise, bell / 2D Gaussian | 7 |
 | Flicker noise, OLS / zero correlation | 8 |
 | Flicker noise, ADF + Theil-Sen | 10, with 17, 18, 20 |
+| Single-level model fit of I-V curves | 27 |
+| Transition voltage spectroscopy | 28, 29 |
 | PSD (Welch), smoothing | 22, 23 |
 | Libraries used | 24, 25 |
