@@ -1,4 +1,4 @@
-"""Flicker noise, I-V and piezo modulation tabs."""
+"""Flicker noise, events, I-V and piezo modulation tabs."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import os
 import numpy as np
 from PySide6.QtWidgets import QComboBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout, QWidget
 
-from .. import export as ex, figures as figs, iv, ivmodels as ivm, modulation as md, noise as nz, style
+from .. import events as evm, export as ex, figures as figs, iv, ivmodels as ivm, modulation as md, noise as nz, style
 from .base import AnalysisTab
 from .widgets import PlotPanel, SettingsForm, decimate_for_plot, error_box, make_button, scroll_panel
 
@@ -23,6 +23,7 @@ NOISE_LABELS = {
     "stationarity_test": "ADF stationarity test", "adf_alpha": "ADF significance (alpha)",
     "peak_center": "peak centre (log G, empty = off)", "peak_sigma": "peak sigma (decades)",
     "peak_nsigma": "ends within +/- n sigma", "end_fraction": "end fraction",
+    "end_points": "end points (0 = use fraction)",
     "subtract_floor": "subtract instrument floor",
     "floor_below": "floor = windows below log G", "estimator": "estimator for n",
     "n_min": "n scan from", "n_max": "n scan to",
@@ -98,6 +99,11 @@ class NoiseTab(AnalysisTab):
         pl.addWidget(make_button("Classic: Adak et al. 2015 (2D Gaussian bell)", self.preset_adak,
                                  "Uses 100 ms windows and a Welch PSD (100-1000 Hz); n is where the fitted 2D Gaussian "
                                  "has zero correlation."))
+        pl.addWidget(make_button("Rashid et al. 2025 (Pearson r scan)", self.preset_rashid,
+                                 "Drops the first 10 ms of each hold and uses the rest as one window, keeps holds whose "
+                                 "first and last 100 points average within +/- 1 sigma of the peak, DFT squared "
+                                 "(periodogram) integrated 100-1000 Hz, n where the Pearson r is smallest "
+                                 "(scan 0.3-2.3 in steps of 0.01)."))
         pl.addWidget(make_button("Peak from histogram fit", self.peak_from_histogram,
                                  "Copies the centre and sigma of the fitted 1D-histogram peak that lies inside the accepted "
                                  "conductance range (Histograms tab, Fit peaks)."))
@@ -120,6 +126,12 @@ class NoiseTab(AnalysisTab):
         if cur is not None:
             self.form.set_value(nz.morris2025_settings(cur))
             self.status("Morris et al. 2025 settings applied. Set the peak (Peak from histogram fit), then run.")
+
+    def preset_rashid(self):
+        cur = self.form_value("noise")
+        if cur is not None:
+            self.form.set_value(nz.rashid2025_settings(cur))
+            self.status("Rashid et al. 2025 settings applied. Set the peak (Peak from histogram fit), then run.")
 
     def preset_adak(self):
         cur = self.form_value("noise")
@@ -201,7 +213,8 @@ class NoiseTab(AnalysisTab):
             lo, hi = sc["n_tse_ci95"]
             lines += [f"<b>n (Theil-Sen) = {sc['n_tse']:.3f} &plusmn; {sc['n_tse_se']:.3f}</b> "
                       f"(95 % CI {lo:.3f} - {hi:.3f})",
-                      f"n (OLS) = {sc['n_ols']:.3f} &plusmn; {sc['n_ols_se']:.3f}",
+                      f"n (OLS) = {sc['n_ols']:.3f} &plusmn; {sc['n_ols_se']:.3f}; "
+                      f"minimum |Pearson r| on the scan grid at n = {sc['n_pearson_grid']:.2f}",
                       f"n (2D Gaussian fit) = {sc['n_fit']:.3f}",
                       f"Bell at n = {sc['n_best']:.3f} ({sc['estimator']}); centre at log G = {sc['bell'].x0:.2f}",
                       f"<b>{sc['interpretation']}</b>"]
@@ -270,6 +283,7 @@ class NoiseTab(AnalysisTab):
                       f"n_OLS = {sc['n_ols']:.4f} +/- {sc['n_ols_se']:.4f} (SE), "
                       f"bootstrap 95% CI {sc['n_ols_ci95'][0]:.4f} .. {sc['n_ols_ci95'][1]:.4f}",
                       f"n_2DGaussian = {sc['n_fit']:.4f}",
+                      f"n_Pearson_grid_minimum = {sc['n_pearson_grid']:.4f}",
                       f"estimator used for the bell = {sc['estimator']}, n = {sc['n_best']:.4f}",
                       f"bell: x0 = {b.x0:.4f}, y0 = {b.y0:.4f}, sx = {b.sx:.4f}, sy = {b.sy:.4f}, rho = {b.rho:.4f}",
                       f"bell x range (log G): {sc['x_edges'][0]:.4f} .. {sc['x_edges'][-1]:.4f}",
@@ -277,6 +291,135 @@ class NoiseTab(AnalysisTab):
                       sc["interpretation"]]
         lines.append("settings: " + str(r.settings))
         files.append(ex.save_summary(folder, lines, f"{prefix}_Noise_summary.txt"))
+        return files
+
+
+# Flickering and mechanical events (Rashid et al. 2025, SI 2.6)
+
+EVENT_LABELS = {"source": "segments", "lowpass_hz": "low-pass (Hz)", "lowpass_order": "low-pass order",
+                "sg_side_points": "Savitzky-Golay side points", "sg_order": "Savitzky-Golay order",
+                "dt_s": "derivative dt (s)", "min_width": "peak width (samples)",
+                "peak_method": "peak detection", "polarity": "count",
+                "flicker_threshold": "flicker threshold", "mechanical_threshold": "mechanical threshold",
+                "g_min": "valid from log G", "g_max": "valid to log G", "level_ms": "level before/after (ms)",
+                "t_bins": "hold histogram: time bins", "g_bins_per_decade": "hold histogram: bins / decade"}
+EVENT_CHOICES = {"source": ["traces", "holds"], "peak_method": ["quadratic fit", "minimum width"],
+                 "polarity": ["rises", "drops", "both"]}
+EVENT_TIPS = {
+    "dt_s": "The derivative is (G[i+1] - G[i-1]) / (2 dt) with G in G0. Rashid et al. 2025 used dt = 20 ms; the "
+            "thresholds are on that scale.",
+    "peak_method": "quadratic fit: like LabVIEW's Peak Detector, a quadratic is fitted over 'width' points and its "
+                   "maximum must reach the threshold.\nminimum width: peaks at least 'width' samples wide at "
+                   "half height.",
+    "polarity": "rises: conductance increases only (LabVIEW Peak Detector default). both: also drops.",
+    "g_min": "Events where the junction is outside this range (contact, noise floor) are false positives.",
+}
+
+
+class EventsTab(AnalysisTab):
+    title = "Events"
+
+    def __init__(self, project, main):
+        super().__init__(project, main)
+        self.form = SettingsForm("Flicker / mechanical event detection", evm.EventSettings(), EVENT_LABELS,
+                                 EVENT_CHOICES, EVENT_TIPS)
+        self.forms["events"] = self.form
+        self.result_label = QLabel("")
+        self.result_label.setWordWrap(True)
+        self.example = QSpinBox()
+        self.example.setRange(0, 0)
+        self.example.valueChanged.connect(lambda _: self._draw())
+        row = QWidget()
+        rl = QHBoxLayout(row)
+        rl.setContentsMargins(0, 0, 0, 0)
+        rl.addWidget(QLabel("show trace"))
+        rl.addWidget(self.example)
+        info = QLabel("G(t) is low-pass filtered (Butterworth) and smoothed (Savitzky-Golay), differentiated, and "
+                      "peaks of the derivative above the thresholds count as flickers or mechanical events "
+                      "(Rashid et al., JACS 2025). With holds, the conductance-time histogram of the holds is "
+                      "shown too.")
+        info.setWordWrap(True)
+        self.layout_.addWidget(scroll_panel(self.form, make_button("Detect events", self.run), row,
+                                            self.result_label, info, width=360))
+        self.plot = PlotPanel()
+        self.layout_.addWidget(self.plot, 1)
+        self.res = None
+        self.segs = []
+        self.th = None
+
+    def run(self):
+        es = self.form_value("events")
+        if es is None:
+            return
+        segs = self.project.holds if es.source == "holds" else self.project.selected()
+        if not segs:
+            error_box(self, self.title, "Nothing to analyse. Detect the traces in the Data & Traces tab first "
+                                        "(holds need a piezo signal).")
+            return
+
+        def job():
+            res = evm.analyse(segs, es)
+            th = evm.time_histogram(segs, es) if es.source == "holds" else None
+            return res, th
+
+        def done(out):
+            self.res, self.th = out
+            self.segs = segs
+            first = next((e.trace for e in self.res.events), 0)
+            self.example.blockSignals(True)
+            self.example.setRange(0, max(0, len(segs) - 1))
+            self.example.setValue(first)
+            self.example.blockSignals(False)
+            self.result_label.setText("<br>".join(self.res.summary_lines()))
+            self._draw()
+
+        self.background(job, on_done=done, busy="Detecting events ...")
+
+    def panels(self):
+        if self.res is None:
+            return []
+        k = self.example.value()
+        example = None
+        if 0 <= k < len(self.segs):
+            evs, yf, d, _ = evm.detect(self.segs[k], self.res.settings, k)
+            kind = self.res.kinds[k] if k < len(self.res.kinds) else ""
+            example = (self.segs[k], yf, d, evs, f"{self.res.settings.source[:-1]} {k}: {kind}")
+        return figs.events(self.res, example, self.th)
+
+    def _draw(self):
+        self.plot.show_panels(self.panels(), 3)
+
+    def has_results(self):
+        return self.res is not None
+
+    def export(self, folder, prefix):
+        if self.res is None:
+            return []
+        r = self.res
+        f1 = os.path.join(folder, f"{prefix}_events.txt")
+        ex.save_columns(f1, ["segment", "sample", "time_s", "mechanical", "dGdt", "logG_before", "logG_after"],
+                        [e.trace for e in r.events], [e.index for e in r.events],
+                        [e.index / self.segs[e.trace].fs for e in r.events],
+                        [int(e.kind == "mechanical") for e in r.events], [e.height for e in r.events],
+                        [e.logG_before for e in r.events], [e.logG_after for e in r.events])
+        f2 = os.path.join(folder, f"{prefix}_events_per_trace.txt")
+        cls = {"quiet": 0, "flickering": 1, "mechanical": 2}
+        ex.save_columns(f2, ["trace", "flickers", "mechanical", "class_0quiet_1flicker_2mechanical"],
+                        r.index, r.n_flicker, r.n_mechanical, [cls[k] for k in r.kinds])
+        files = [f1, f2]
+        if self.th is not None:
+            tc, gc, H, mp, sd = self.th
+            f3 = os.path.join(folder, f"{prefix}_hold_time_histogram.txt")
+            ex.save_matrix(f3, H.T)
+            f4 = os.path.join(folder, f"{prefix}_hold_most_probable.txt")
+            ex.save_columns(f4, ["time_s", "most_probable_logG", "sigma"], tc, mp, sd)
+            n = max(len(tc), len(gc))
+            pad = lambda a: np.r_[a, np.full(n - len(a), np.nan)]  # noqa: E731
+            f5 = os.path.join(folder, f"{prefix}_hold_time_histogram_scales.txt")
+            ex.save_columns(f5, ["time_s", "logG_G0"], pad(tc), pad(gc))
+            files += [f3, f4, f5]
+        files.append(ex.save_summary(folder, r.summary_lines() + ["settings: " + str(r.settings.to_dict())],
+                                     f"{prefix}_events_summary.txt"))
         return files
 
 
@@ -288,13 +431,30 @@ IV_LABELS = {"min_amplitude": "min sweep amplitude (V)", "smooth_points": "smoot
              "log_current": "log |I| histogram"}
 IVM_LABELS = {"fit_v_max": "fit only |V| below (V, empty = all)", "fit_asymmetry": "fit asymmetry a",
               "n_molecules": "molecules in parallel N", "tvs_v_min": "TVS: ignore |V| below (V)",
-              "max_curves": "fit at most N single curves"}
+              "max_curves": "fit at most N single curves", "temperature": "temperature (K, 0 = T = 0 form)",
+              "integration": "mean-curve integration", "energy_step": "energy grid step (meV)",
+              "energy_min": "energy grid from (eV)", "energy_max": "energy grid to (eV)",
+              "fit_method": "fit algorithm", "fit_n": "fit N too (ensembles)",
+              "mp_v_bins": "most probable: bias bins", "mp_i_bins": "most probable: current bins",
+              "weight_by_sigma": "weight by 1/sigma"}
+IVM_CHOICES = {"integration": ["analytic", "energy grid"], "fit_method": ["trust region", "Levenberg-Marquardt"]}
 IVM_TIPS = {
     "fit_v_max": "The single-level model holds while the level is outside the bias window; "
                  "restrict the fit if the curves go much further.",
     "fit_asymmetry": "Lets the level move with the bias, e(V) = eps0 + a V. Off: symmetric junction (a = 0).",
     "n_molecules": "N in I = N G0 Gamma [...]. Keep 1 for single-molecule junctions.",
     "tvs_v_min": "Below this the current is too small for a stable V^2/|I|.",
+    "temperature": "Fermi smearing of the leads. 0 uses the zero-temperature closed form; above 0 the exact "
+                   "finite-temperature current (digamma form, or the energy grid below).",
+    "integration": "analytic: closed form (fast). energy grid: Landauer integral on an energy grid as in "
+                   "Rashid et al. 2025; used for the mean and most probable curves, the single curves always "
+                   "use the closed form (both agree to ~1e-9).",
+    "energy_step": "Rashid et al. 2025: 0.02 meV.",
+    "fit_method": "trust region: bounded least squares. Levenberg-Marquardt: unbounded, as in Rashid et al. 2025.",
+    "fit_n": "Lets the number of molecules N float, e.g. for EGaIn / large-area junctions. N and Gamma are "
+             "strongly correlated; eps0 is the robust number then.",
+    "mp_v_bins": "The most probable curve: in each bias bin a Gaussian is fitted to the current distribution "
+                 "(Rashid et al. 2025, Fig. S22).",
 }
 
 
@@ -307,7 +467,7 @@ class IVTab(AnalysisTab):
         self.form = SettingsForm("I-V sweeps", iv.IVSettings(), IV_LABELS)
         self.forms["iv"] = self.form
         self.model_form = SettingsForm("Single-level model and TVS", ivm.IVModelSettings(), IVM_LABELS,
-                                       tips=IVM_TIPS)
+                                       IVM_CHOICES, IVM_TIPS)
         self.forms["iv_models"] = self.model_form
         self.result_label = QLabel("Requires a time-resolved bias: a TDMS file with a bias channel, or a text "
                                    "file with a bias column.")
@@ -320,6 +480,12 @@ class IVTab(AnalysisTab):
         info.setWordWrap(True)
         self.layout_.addWidget(scroll_panel(_recording_box(self, self.rec), self.form,
                                             make_button("Analyse I-V", self.run), self.result_label,
+                                            make_button("Preset: Rashid et al. 2025 (300 K, energy grid, LM)",
+                                                        self.preset_rashid,
+                                                        "Finite temperature (300 K), Landauer integral on an energy "
+                                                        "grid from -10 to 10 eV in 0.02 meV steps, Levenberg-"
+                                                        "Marquardt fit of the most probable I-V curve, "
+                                                        "Gamma_L = Gamma_R."),
                                             self.model_form,
                                             make_button("Fit single-level model + TVS", self.run_models),
                                             self.model_label, info))
@@ -347,6 +513,13 @@ class IVTab(AnalysisTab):
             self.result_label.setText("No bias sweeps were found in this recording (the bias is constant or "
                                       "varies less than the minimum sweep amplitude).")
         self._draw()
+
+    def preset_rashid(self):
+        cur = self.form_value("iv_models")
+        if cur is None:
+            return
+        self.model_form.set_value(ivm.rashid2025_settings(cur))
+        self.status("Rashid et al. 2025 settings applied (temperature 300 K assumed: the SI does not state it).")
 
     def run_models(self):
         ms = self.form_value("iv_models")
@@ -405,6 +578,14 @@ class IVTab(AnalysisTab):
                             m.column("eps0"), m.column("eps0_err"), m.column("Gamma"), m.column("Gamma_err"),
                             m.column("a"), m.column("r2"))
             files.append(p)
+            if m.most_probable is not None:
+                vg, mu, sd, cnt = m.most_probable
+                f = m.mean["most probable"][2]
+                fit = ivm.slm_current(vg, f.eps0, f.Gamma, f.a, f.n, m.settings.temperature) if f.ok \
+                    else np.full(len(vg), np.nan)
+                p = os.path.join(folder, f"{prefix}_IV_most_probable.txt")
+                ex.save_columns(p, ["V", "I_most_probable_A", "sigma_A", "points", "I_SLM_fit_A"], vg, mu, sd, cnt, fit)
+                files.append(p)
             files.append(ex.save_summary(folder, m.summary_lines() + ["settings: " + str(m.settings.to_dict())],
                                          f"{prefix}_IV_models_summary.txt"))
         return files

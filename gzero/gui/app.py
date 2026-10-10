@@ -23,12 +23,13 @@ from PySide6.QtWidgets import (
 from .. import export as ex
 from .project import Project
 from .tabs_data import ConvertTab, DataTab, SimulationTab
-from .tabs_noise import IVTab, ModulationTab, NoiseTab
+from .tabs_egain import EGaInTab
+from .tabs_noise import EventsTab, IVTab, ModulationTab, NoiseTab
 from .tabs_stats import ClusterTab, CorrelationTab, HistogramTab, JunctionTab, PlateauTab
 from .widgets import error_box
 
 APP_NAME = "GZero"
-APP_VERSION = "1.3"
+APP_VERSION = "1.4"
 
 ABOUT = f"""<h3>{APP_NAME} {APP_VERSION}</h3>
 <p>Conversion and statistical analysis of single-molecule break-junction measurements
@@ -50,6 +51,11 @@ n ~ 1 through-bond, n ~ 2 through-space): bell-shaped 2D Gaussian analysis (Adak
 Nano Lett. 2015) and the robust ADF + Theil-Sen method (Morris et al., J. Phys. Chem. C 2025).</li>
 <li><b>I-V</b>: sweeps, dI/dV, single-level model fit (Zotti 2010) and transition voltage
 spectroscopy (Beebe 2006, Baldea 2012).</li>
+<li><b>Events</b>: flickering and mechanical events in G(t) and conductance-time histograms of holds
+(Rashid et al., JACS 2025).</li>
+<li><b>EGaIn (ensemble)</b>: large-area junctions, Gaussian log|J| statistics with junction-based
+confidence intervals, yield, rectification, V<sub>trans</sub>, single-level fit and beta from a length series
+(Reus 2012; XMe, Hong group; GaussFit, Chiechi group).</li>
 <li><b>Piezo modulation</b> (lock-in beta), <b>Simulation</b> (synthetic ground truth).</li>
 </ul>"""
 
@@ -71,7 +77,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.tabs)
         self._tabs = {}
         for cls in (ConvertTab, DataTab, HistogramTab, PlateauTab, JunctionTab, CorrelationTab, ClusterTab,
-                    NoiseTab, IVTab, ModulationTab, SimulationTab):
+                    NoiseTab, EventsTab, IVTab, ModulationTab, EGaInTab, SimulationTab):
             tab = cls(self.project, self)
             self._tabs[tab.title] = tab
             self.tabs.addTab(tab, tab.title)
