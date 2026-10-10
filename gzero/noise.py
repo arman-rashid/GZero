@@ -51,6 +51,7 @@ class NoiseSettings:
     peak_sigma: float | None = None          # its Gaussian sigma (decades)
     peak_nsigma: float = 2.0                 # ends must lie within centre +/- nsigma * sigma
     end_fraction: float = 0.05               # "ends" = first and last fraction of the window
+    end_points: int = 0                      # if > 0: "ends" = this many points instead of the fraction
     # instrument floor
     subtract_floor: bool = False
     floor_below: float = -5.2      # windows with log G below this define the floor PSD
@@ -84,6 +85,30 @@ def morris2025_settings(base: NoiseSettings | None = None) -> NoiseSettings:
     s.peak_nsigma = 2.0
     s.end_fraction = 0.05
     s.estimator = "Theil-Sen"
+    return s
+
+
+def rashid2025_settings(base: NoiseSettings | None = None) -> NoiseSettings:
+    """Protocol of Rashid et al., JACS 147, 830 (2025), SI 2.3 (and JACS 146, 9063 (2024)).
+
+    Piezo held 160 ms at 100 mV; the first 10 ms are dropped and the rest is one
+    window. The first and last 100 points must average within +/- 1 sigma of the most
+    probable conductance. DFT squared (periodogram), integrated 100 Hz - 1 kHz.
+    n is where the Pearson r of NP/G^n and G is smallest, scanned 0.3 - 2.3 in 0.01.
+    """
+    s = NoiseSettings(**asdict(base)) if base is not None else NoiseSettings()
+    s.cut_initial_ms, s.cut_final_ms = 10.0, 0.0
+    s.window_ms = 0.0
+    s.f_lo, s.f_hi = 100.0, 1000.0
+    s.psd_method, s.psd_window = "periodogram", "boxcar"
+    s.detrend = "constant"
+    s.max_abs_kurtosis = None
+    s.max_drift = None
+    s.stationarity_test = False
+    s.peak_nsigma = 1.0
+    s.end_points = 100
+    s.estimator = "OLS"
+    s.n_min, s.n_max, s.n_step = 0.3, 2.3, 0.01
     return s
 
 
@@ -160,7 +185,8 @@ def _check(win: NoiseWindow, y: np.ndarray, ns: NoiseSettings):
         win.accepted, win.reason = False, "conductance out of range"
         return
     if ns.peak_center is not None and ns.peak_sigma is not None:
-        m = max(1, int(round(ns.end_fraction * len(y))))
+        m = int(ns.end_points) if ns.end_points > 0 else max(1, int(round(ns.end_fraction * len(y))))
+        m = min(m, max(1, len(y) // 2))
         lo = ns.peak_center - ns.peak_nsigma * ns.peak_sigma
         hi = ns.peak_center + ns.peak_nsigma * ns.peak_sigma
         g = 10.0 ** y
@@ -304,6 +330,7 @@ def scaling_exponent(G: np.ndarray, NP: np.ndarray, ns: NoiseSettings) -> dict:
     lr = stats.linregress(x, ly)
     n_ols, se_ols = float(lr.slope), float(lr.stderr)
     rho_p = np.array([np.corrcoef(x, ly - n * x)[0, 1] for n in grid])
+    n_pearson_grid = float(grid[np.nanargmin(np.abs(rho_p))])   # Rashid et al. 2025: minimum |r| on the grid
 
     # Theil-Sen = zero of Kendall's tau of (log G, log NP/G^n)
     ts = theil_sen(x, ly)
@@ -337,6 +364,7 @@ def scaling_exponent(G: np.ndarray, NP: np.ndarray, ns: NoiseSettings) -> dict:
     bell, H, xe, ye = fit_bell(x, ly - best * x, best, ns.x_bins, ns.y_bins)
     return {
         "n_grid": grid, "rho_pearson": rho_p, "tau_kendall": tau_k, "rho_fit": rho_fit,
+        "n_pearson_grid": n_pearson_grid,
         "n_ols": n_ols, "n_ols_se": se_ols, "n_ols_ci95": ci_boot, "ols_intercept": float(lr.intercept),
         "n_tse": ts["slope"], "n_tse_se": ts["se"], "n_tse_ci95": ts["ci95"], "tse_intercept": ts["intercept"],
         "tse_points": ts["n_used"],

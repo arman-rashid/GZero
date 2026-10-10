@@ -350,15 +350,20 @@ def modulation(rec, r, spectrum_fn) -> list[Panel]:
 def iv_models(res, slm_fn, fn_fn) -> list[Panel]:
     """Single-level fit and transition voltage spectroscopy (ivmodels.analyse result)."""
     panels = []
-    colors = {"forward": "k", "backward": PALETTE[3]}
+    colors = {"forward": "k", "backward": PALETTE[3], "most probable": PALETTE[2]}
+    fit_colors = {"forward": PALETTE[0], "backward": PALETTE[1], "most probable": PALETTE[4]}
     if res.mean:
         def slm(fig, ax):
             for d, (vg, m, f, _, _) in res.mean.items():
-                ax.plot(vg, m * 1e9, ".", ms=1.5 if is_export(ax) else 2.5, color=colors[d], alpha=0.5,
-                        label=f"Mean {d}")
+                if d == "most probable" and res.most_probable is not None:
+                    ax.errorbar(vg, m * 1e9, yerr=res.most_probable[2] * 1e9, fmt="o", ms=2, lw=0.5,
+                                color=colors[d], label="Most probable (Gaussian per bias bin)")
+                else:
+                    ax.plot(vg, m * 1e9, ".", ms=1.5 if is_export(ax) else 2.5, color=colors[d], alpha=0.5,
+                            label=f"Mean {d}")
                 if f.ok:
-                    ax.plot(vg, slm_fn(vg, f.eps0, f.Gamma, f.a, res.settings.n_molecules) * 1e9,
-                            color=PALETTE[0] if d == "forward" else PALETTE[1], lw=1.0,
+                    ax.plot(vg, slm_fn(vg, f.eps0, f.Gamma, f.a, f.n, res.settings.temperature) * 1e9,
+                            color=fit_colors[d], lw=1.0,
                             label=f"SLM: $\\varepsilon_0$ = {f.eps0:.2f} eV, $\\Gamma$ = {1e3 * f.Gamma:.2g} meV")
             ax.set_xlabel("Bias (V)")
             ax.set_ylabel("Current (nA)")
@@ -366,6 +371,8 @@ def iv_models(res, slm_fn, fn_fn) -> list[Panel]:
 
         def fn(fig, ax):
             for d, (vg, m, _, vp, vm) in res.mean.items():
+                if d == "most probable":
+                    continue
                 for side, (x, y) in fn_fn(vg, m, res.settings.tvs_v_min).items():
                     ax.plot(x, y, lw=0.8, color=colors[d], ls="-" if side == "positive" else "--",
                             label=f"{d}, {side} bias")
@@ -473,3 +480,188 @@ def junctions(res) -> list[Panel]:
     return [Panel("junction_plateau_conductance_histogram", g_hist), Panel("junction_conductance_vs_trace", g_vs_n),
             Panel("junction_yield_vs_trace", yield_vs_n), Panel("junction_plateau_length_histogram", length_hist),
             Panel("junction_length_vs_conductance", length_vs_g)]
+
+
+# Flickering and mechanical events
+
+def events(res, example=None, th=None) -> list[Panel]:
+    """res = events.EventResult; example = (trace, filtered G, derivative, events of it, label);
+    th = time_histogram(...) output of the holds or None."""
+    s = res.settings
+    panels = []
+    if example is not None:
+        t, yf, d, evs, lab = example
+
+        def ex(fig, ax):
+            tt = t.t
+            ax.plot(tt, 10 ** t.logG, lw=0.3, color="0.6", label="G")
+            ax.plot(tt, yf, lw=0.8, color="k", label="filtered")
+            for e in evs:
+                ax.axvline(tt[e.index], color=PALETTE[3] if e.kind == "mechanical" else PALETTE[1], lw=0.8,
+                           ls="--")
+            ax.set_yscale("log")
+            ax.set_xlabel("Time (s)")
+            ax.set_ylabel("G/G$_0$")
+            ax.legend()
+            title(ax, lab)
+
+        def der(fig, ax):
+            ax.plot(t.t, d, lw=0.6, color="k")
+            for v, c in ((s.flicker_threshold, PALETTE[1]), (s.mechanical_threshold, PALETTE[3])):
+                for sg in ((1,) if s.polarity == "rises" else (-1,) if s.polarity == "drops" else (1, -1)):
+                    ax.axhline(sg * v, color=c, lw=0.6, ls=":")
+            ax.set_xlabel("Time (s)")
+            ax.set_ylabel("dG/dt (G$_0$ per dt)")
+            title(ax, "Derivative; dotted: flicker / mechanical thresholds")
+        panels += [Panel("events_example_trace", ex, aspect=0.6), Panel("events_example_derivative", der, aspect=0.6)]
+
+    def kinds(fig, ax):
+        names = ["quiet", "flickering", "mechanical"]
+        n = max(1, len(res.kinds))
+        vals = [100 * np.sum(res.kinds == k) / n for k in names]
+        ax.bar(names, vals, color=["0.6", PALETTE[1], PALETTE[3]])
+        ax.set_ylabel("Traces (%)")
+
+    def per_trace(fig, ax):
+        top = int(max(1, res.n_flicker.max() if len(res.n_flicker) else 1))
+        ax.hist(res.n_flicker, np.arange(-0.5, top + 1.5), color=PALETTE[1])
+        ax.set_xlabel("Flickers per trace")
+        ax.set_ylabel("Traces")
+    panels += [Panel("events_trace_classes", kinds), Panel("events_flickers_per_trace", per_trace)]
+
+    if res.events:
+        def trans(fig, ax):
+            for kind, c in (("flicker", PALETTE[1]), ("mechanical", PALETTE[3])):
+                b = [e.logG_before for e in res.events if e.kind == kind]
+                a = [e.logG_after for e in res.events if e.kind == kind]
+                if b:
+                    ax.plot(b, a, "o", ms=2, color=c, alpha=0.6, label=kind)
+            lo, hi = s.g_min, s.g_max
+            ax.plot([lo, hi], [lo, hi], color="0.6", lw=0.5)
+            ax.set_xlabel(f"{LOGG} before")
+            ax.set_ylabel(f"{LOGG} after")
+            ax.legend()
+            title(ax, "Conductance before and after each event")
+        panels.append(Panel("events_transition_map", trans, aspect=0.9))
+
+    if th is not None:
+        tc, gc, H, mp, sd = th
+
+        def hold(fig, ax):
+            vmax = np.percentile(H[H > 0], 99.5) if np.any(H > 0) else 1
+            m = ax.pcolormesh(tc, gc, H.T, cmap="viridis", vmin=0, vmax=vmax, shading="nearest", rasterized=True)
+            _colorbar(fig, ax, m, "Counts per segment")
+            ok = np.isfinite(mp)
+            ax.errorbar(tc[ok][::4], mp[ok][::4], yerr=np.nan_to_num(sd[ok][::4]), fmt="-", color=PALETTE[5],
+                        lw=0.8, elinewidth=0.5, ecolor="w")
+            ax.set_xlabel("Time (s)")
+            ax.set_ylabel(LOGG)
+            title(ax, "Holds: conductance-time histogram, most probable G")
+        panels.append(Panel("events_hold_time_histogram", hold, aspect=0.8))
+    return panels
+
+
+# Ensemble (EGaIn) junctions
+
+def egain(r, beta=None, slm_fn=None) -> list[Panel]:
+    """r = egain.EGaInResult; beta = egain.fit_beta output or None."""
+    from .egain import gauss_fit
+    s = r.settings
+    LOGJ = "log|J| (A cm$^{-2}$)"
+
+    def traces(fig, ax):
+        for row in r.logJ[:300]:
+            ax.plot(r.grid, row, lw=0.3, color="0.7", alpha=0.6)
+        ok = np.isfinite(r.mu)
+        ax.errorbar(r.grid[ok], r.mu[ok], yerr=r.sigma[ok], fmt="o-", ms=2.5, lw=0.8, color="k", capsize=1.5,
+                    label=r"$\langle$log|J|$\rangle$ $\pm$ $\sigma_{log}$")
+        ax.set_xlabel("Bias (V)")
+        ax.set_ylabel(LOGJ)
+        ax.legend()
+        title(ax, f"{r.name}: {r.n_working} junctions, {len(r.logJ)} sweeps")
+
+    def heat(fig, ax):
+        vals = r.logJ[np.isfinite(r.logJ)]
+        if not len(vals):
+            return
+        ye = np.arange(np.floor(vals.min()), np.ceil(vals.max()) + 1e-9, 1 / s.bins_per_decade)
+        H = np.zeros((len(r.grid), len(ye) - 1))
+        for k in range(len(r.grid)):
+            col = r.logJ[:, k]
+            H[k] = np.histogram(col[np.isfinite(col)], ye)[0]
+        dv = r.grid[1] - r.grid[0] if len(r.grid) > 1 else 1
+        m = ax.pcolormesh(np.r_[r.grid - dv / 2, r.grid[-1] + dv / 2], ye, H.T / max(1, len(r.logJ)),
+                          cmap="viridis", rasterized=True)
+        _colorbar(fig, ax, m, "Counts per sweep")
+        ax.plot(r.grid, r.mu, color="w", lw=0.8)
+        ax.set_xlabel("Bias (V)")
+        ax.set_ylabel(LOGJ)
+
+    k = r.at(s.v_report)
+
+    def hist_v(fig, ax):
+        col = r.logJ[:, k]
+        mu, sg, h = gauss_fit(col, s.bins_per_decade)
+        if h is not None:
+            c, n, f = h
+            ax.bar(c, n, width=1 / s.bins_per_decade, color="0.7")
+            ax.plot(c, f, color=PALETTE[3], lw=1.0, label=f"{mu:.2f} $\\pm$ {sg:.2f}")
+            ax.legend()
+        ax.set_xlabel(f"log|J| at {r.grid[k]:+.2f} V")
+        ax.set_ylabel("Sweeps")
+
+    panels = [Panel("egain_JV", traces), Panel("egain_logJ_2D_histogram", heat, aspect=0.8),
+              Panel("egain_logJ_histogram", hist_v)]
+    lr = r.logR.get(round(abs(r.grid[k]), 6))
+    if lr is not None and len(lr):
+        def rect(fig, ax):
+            mu, sg, h = gauss_fit(lr, 20)
+            if h is not None:
+                c, n, f = h
+                ax.bar(c, n, width=0.05, color="0.7")
+                ax.plot(c, f, color=PALETTE[3], lw=1.0, label=f"log R = {mu:.2f} $\\pm$ {sg:.2f}")
+                ax.legend()
+            ax.set_xlabel(f"log R = log|J(+V)/J(-V)| at {abs(r.grid[k]):.2f} V")
+            ax.set_ylabel("Cycles")
+        panels.append(Panel("egain_rectification_histogram", rect))
+    vp, vm = r.vt_plus[np.isfinite(r.vt_plus)], r.vt_minus[np.isfinite(r.vt_minus)]
+    if len(vp) or len(vm):
+        def vt(fig, ax):
+            e = np.arange(0, np.max(np.r_[vp, np.abs(vm)]) + 2 * s.v_step, s.v_step) - s.v_step / 2
+            if len(vp):
+                ax.hist(vp, e, histtype="step", color=PALETTE[0], lw=1.0, label=f"V$_{{trans}}^+$ ({len(vp)})")
+            if len(vm):
+                ax.hist(np.abs(vm), e, histtype="step", color=PALETTE[1], lw=1.0,
+                        label=f"|V$_{{trans}}^-$| ({len(vm)})")
+            ax.set_xlabel("Transition voltage (V)")
+            ax.set_ylabel("Cycles")
+            ax.legend()
+        panels.append(Panel("egain_transition_voltage_histogram", vt))
+    if r.slm is not None and r.slm.ok and slm_fn is not None:
+        def slm(fig, ax):
+            ok = np.isfinite(r.mu)
+            ax.plot(r.grid[ok], np.sign(r.grid[ok]) * 10 ** r.mu[ok], "o", ms=2.5, color="k",
+                    label=r"$\langle$J$\rangle$ (Gaussian mean)")
+            vv = np.linspace(r.grid.min(), r.grid.max(), 300)
+            f = r.slm
+            ax.plot(vv, slm_fn(vv, f.eps0, f.Gamma, f.a, f.n, s.temperature), color=PALETTE[0], lw=1.0,
+                    label=f"SLM: $\\varepsilon_0$ = {f.eps0:.2f} eV")
+            ax.set_xlabel("Bias (V)")
+            ax.set_ylabel("J (A cm$^{-2}$)")
+            ax.legend()
+        panels.append(Panel("egain_SLM_fit", slm))
+    if beta is not None:
+        def bplot(fig, ax):
+            d = np.array([p[0] for p in beta["points"]])
+            y = np.array([p[1] for p in beta["points"]])
+            e = np.array([p[2] for p in beta["points"]])
+            ax.errorbar(d, y, yerr=e, fmt="o", color="k", ms=3, capsize=2)
+            dd = np.linspace(min(0, d.min()), d.max(), 50)
+            ax.plot(dd, beta["logJ0"] - beta["beta"] * dd / np.log(10), color=PALETTE[3], lw=1.0,
+                    label=f"$\\beta$ = {beta['beta']:.3f} $\\pm$ {beta['beta_err']:.3f}, "
+                          f"log J$_0$ = {beta['logJ0']:.2f}")
+            ax.set_xlabel("Molecular length (units as entered)")
+            ax.set_ylabel(f"log|J| at {beta['v']:+.2f} V")
+            ax.legend()
+        panels.append(Panel("egain_beta", bplot))
+    return panels

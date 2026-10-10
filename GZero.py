@@ -43,6 +43,18 @@ def selftest(report_path):
     f = mr.mean["forward"][2]
     lines.append(f"SLM eps0 {f.eps0:.3f} eV Gamma {1e3 * f.Gamma:.1f} meV (truth 0.800, 20.0); "
                  f"eps0 from V_t {np.nanmedian(mr.eps_tvs):.3f} eV")
+    s3 = ivm.rashid2025_settings()
+    Vg = np.linspace(-1, 1, 81)
+    f3 = ivm.fit_slm(Vg, ivm.slm_current(Vg, 1.10, 0.0113, 0, 1, 300), s3, grid=True)
+    lines.append(f"SLM 300 K energy grid + LM: eps0 {f3.eps0:.3f} eV Gamma {1e3 * f3.Gamma:.2f} meV (truth 1.100, 11.30)")
+    dw = an.dwell_time_ms(peaks[0], 1 / an.HistSettings().bins_per_decade, rec.fs)
+    lines.append(f"dwell time of the first peak {dw:.1f} ms per trace")
+    from gzero import egain as eg, events as evm
+    er = evm.analyse(H, evm.EventSettings(source="holds"))
+    lines.append(f"events in holds: {int(er.n_flicker.sum())} flickers, {int(er.n_mechanical.sum())} mechanical")
+    sets = [eg.analyse(eg.Dataset(f"C{L}", eg.simulate(length=L, seed=L), L), eg.EGaInSettings()) for L in (10, 14, 18)]
+    b = eg.fit_beta(sets, -0.5)
+    lines.append(f"EGaIn beta {b['beta']:.3f} +/- {b['beta_err']:.3f} (truth 0.9), yield {sets[0].n_working}/{sets[0].n_junctions}")
     from gzero import bj_io, conversion as cv
     logG = np.linspace(0.5, -6, 5000)
     Vb = 0.1 + 0.01 * np.sin(np.arange(5000) / 50)
@@ -60,7 +72,9 @@ def selftest(report_path):
     zc, gc, H2 = an.hist2d(good, an.HistSettings())
     panels = [figures.histogram_1d(x, y, "per trace", "All accepted", len(good)),
               figures.histogram_2d(zc, gc, H2, "per trace")] + figures.noise(r, sc, ns, H[0], 0) \
-        + figures.junctions(jr) + figures.iv_models(mr, ivm.slm_current, ivm.fowler_nordheim)
+        + figures.junctions(jr) + figures.iv_models(mr, ivm.slm_current, ivm.fowler_nordheim) \
+        + figures.events(er, None, evm.time_histogram(H, evm.EventSettings())) \
+        + figures.egain(sets[0], b, ivm.slm_current)
     with tempfile.TemporaryDirectory() as tmp:
         files = style.export_panels(panels, tmp, "selftest", style.FigureSettings())
         sizes = [os.path.getsize(f) for f in files]

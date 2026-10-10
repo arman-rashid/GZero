@@ -106,7 +106,8 @@ class HistogramTab(AnalysisTab):
         x, y = an.hist1d(traces, hs)
         zc, gc, H = an.hist2d(traces, hs)
         self.res = {"x": x, "y": y, "zc": zc, "gc": gc, "H": H, "n": len(traces), "hs": hs,
-                    "label": self.selector.label(), "peaks": self.res.get("peaks") if self.res.get("n") == len(traces) else None}
+                    "label": self.selector.label(), "peaks": self.res.get("peaks") if self.res.get("n") == len(traces) else None,
+                    "dwell": self.res.get("dwell") if self.res.get("n") == len(traces) else None}
         self._draw(fs)
 
     def fit(self):
@@ -124,12 +125,22 @@ class HistogramTab(AnalysisTab):
             return
         self.res["peaks"] = (peaks, xf, yf, base)
         self.last_peaks = (peaks, self.res["label"])   # kept when the view changes
+        self.res["dwell"] = self._dwell(peaks)
         lines = []
         for k, p in enumerate(peaks):
+            dw = self.res["dwell"][k]
             lines.append(f"Peak {k + 1}: log G = {p.center:.3f} +/- {p.center_err:.3f}  "
-                         f"(G = {p.G:.3g} G0), sigma = {p.sigma:.3f}, FWHM = {p.fwhm:.3f} dec")
+                         f"(G = {p.G:.3g} G0), sigma = {p.sigma:.3f}, FWHM = {p.fwhm:.3f} dec"
+                         + (f", dwell time {dw:.3g} ms per trace" if np.isfinite(dw) else ""))
         self.result_label.setText("\n".join(lines))
         self._draw(fs)
+
+    def _dwell(self, peaks):
+        """Dwell time of each peak (needs counts or per-trace normalisation)."""
+        hs, traces = self.res["hs"], self.selector.traces()
+        fs = float(np.median([t.fs for t in traces])) if traces else np.nan
+        w = 1.0 / hs.bins_per_decade
+        return [an.dwell_time_ms(p, w, fs, hs.normalize, len(traces)) for p in peaks]
 
     def _cluster_curves(self, hs, n_all):
         out = []
@@ -207,9 +218,11 @@ class HistogramTab(AnalysisTab):
         if r.get("peaks"):
             peaks = r["peaks"][0]
             p = os.path.join(folder, f"{tag}_peak_fit.txt")
-            ex.save_columns(p, ["center_logG", "center_err", "G_G0", "sigma_dec", "fwhm_dec", "amplitude"],
+            dwell = r.get("dwell") or [np.nan] * len(peaks)
+            ex.save_columns(p, ["center_logG", "center_err", "G_G0", "sigma_dec", "fwhm_dec", "amplitude",
+                                "dwell_ms_per_trace"],
                             [q.center for q in peaks], [q.center_err for q in peaks], [q.G for q in peaks],
-                            [q.sigma for q in peaks], [q.fwhm for q in peaks], [q.amplitude for q in peaks])
+                            [q.sigma for q in peaks], [q.fwhm for q in peaks], [q.amplitude for q in peaks], dwell)
             files.append(p)
         return files
 

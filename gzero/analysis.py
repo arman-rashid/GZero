@@ -143,6 +143,22 @@ def fit_peaks(x: np.ndarray, y: np.ndarray, lo: float, hi: float, n_peaks: int =
     return peaks, xf, _multi_gauss(xf, *popt), popt[-1]
 
 
+def dwell_time_ms(peak: PeakFit, bin_width: float, fs: float, normalize: str = "per trace",
+                  n_traces: int = 0) -> float:
+    """Average time per trace spent in a conductance state, from the area of its fitted peak.
+
+    tau = A / w x 1000 / fs ms (Rashid et al., JACS 147, 830 (2025), SI 2.7), where A is the
+    area under the peak of the per-trace normalised 1D histogram and w the bin width:
+    A / w is the number of samples per trace inside the peak.
+    """
+    area = peak.amplitude * abs(peak.sigma) * np.sqrt(2 * np.pi)
+    if normalize == "counts" and n_traces:
+        area /= n_traces
+    elif normalize not in ("per trace", "counts"):
+        return np.nan
+    return float(area / bin_width * 1000.0 / fs) if fs > 0 and bin_width > 0 else np.nan
+
+
 # Plateau length and per-trace plateau conductance
 
 def plateau_lengths(traces: list[Trace], lo: float, hi: float, method: str = "span") -> np.ndarray:
