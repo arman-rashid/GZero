@@ -1,5 +1,7 @@
 # Builds the Windows version and publishes a GitHub release when a tag v* is pushed.
 # The release text comes from .github/release-notes/<tag>.md.
+# It can also be started by hand (Actions -> Windows release -> Run workflow) with a tag name:
+# the commit of the chosen branch is built, and gh creates the tag if it doesn't exist yet.
 name: Windows release
 
 on:
@@ -8,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Existing tag to build and release (e.g. v1.4)"
+        description: "Tag to release (e.g. v1.4); created on the chosen branch if it doesn't exist"
         required: true
 
 permissions:
@@ -21,8 +23,6 @@ jobs:
       TAG: ${{ github.event.inputs.tag || github.ref_name }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
 
       - uses: actions/setup-python@v5
         with:
@@ -54,4 +54,4 @@ jobs:
         run: |
           $notes = ".github/release-notes/$env:TAG.md"
           if (-not (Test-Path $notes)) { "GZero $env:TAG" | Set-Content $notes }
-          gh release create $env:TAG "GZero-$env:TAG-windows-x64.zip" selftest_report.txt --title "GZero $env:TAG" --notes-file $notes
+          gh release create $env:TAG "GZero-$env:TAG-windows-x64.zip" selftest_report.txt --title "GZero $env:TAG" --notes-file $notes --target $env:GITHUB_SHA
