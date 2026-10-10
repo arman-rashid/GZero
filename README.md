@@ -3,7 +3,8 @@
 **Break-junction analysis software.** GZero (G-zero, after the conductance quantum
 G0 = 2e²/h) analyses single-molecule break-junction data (MCBJ and STM-BJ): raw TDMS, text
 (.cvr/.txt/.csv) or Igor (.pxp/.ibw) files to conductance, trace detection, histograms, plateau
-length, 2D correlation, clustering, flicker noise, I-V and piezo modulation.
+length, junction yield, 2D correlation, clustering, flicker noise, I-V (with single-level model fits
+and transition voltage spectroscopy) and piezo modulation.
 
 The manual is `docs/User_Manual.pdf` (Help -> User manual in the program).
 
@@ -81,11 +82,13 @@ Modules:
 | `conversion` | calibration (linear or diode polynomial), single- or dual-stage amplifier (merging Ia and Ib), series resistor correction, filters; column / channel mapping, so conductance, voltage, piezo, current and time given in a file are used as they are |
 | `traces` | splitting recordings into traces, holds, cutting limits, distance axis |
 | `analysis` | histograms, Gaussian fits, plateau length, correlation map, tunnelling decay |
+| `junctions` | per-trace plateau detection (slope test), junction yield, plateau conductance per trace, drift over the run |
 | `origin` | rebuilding the plots in Origin (OriginLab) from the drawn matplotlib panels |
 | `clustering` | 2D-histogram features, PCA, k-means / Gaussian mixture / Ward / spectral |
 | `noise` | noise power, window selection, scaling exponent n (Theil-Sen, OLS, 2D Gaussian) |
 | `stationarity` | ADF test, same results as statsmodels' adfuller |
 | `iv`, `modulation`, `simulation` | I-V sweeps, lock-in beta, fake data |
+| `ivmodels` | single-level (Lorentzian) model fit of I-V curves, transition voltage spectroscopy, eps0 from V_t |
 | `figures`, `style`, `export` | plots, figure style, result files |
 
 ## Checks I did
@@ -96,6 +99,9 @@ Modules:
   n_TSE = 1.52 +/- 0.02 (true 1.5). With 5 % outlier windows Theil-Sen gives 1.40, OLS 1.33.
   dI/dV within 0.3 %, modulation beta 9.00 /nm (true 9.0).
 - ADF test: same statistic, lag and p-value as statsmodels on 300 random series.
+- Single-level model: on a model curve with eps0 = 0.8 eV and Gamma = 20 meV the fit gives 0.800 eV
+  and 20.0 meV. TVS with both polarities gives eps0 = 0.800 eV and the asymmetry a = 0.100 (true 0.1).
+- Junction yield on simulated data: 68.5 +/- 3.3 % (true 70 %) and 29.0 +/- 3.2 % (true 30 %).
 
 ## Methods
 
@@ -103,10 +109,14 @@ Modules:
 - Flicker noise, zero correlation (OLS): Magyarkuti et al., Nanoscale 10, 3362 (2018), doi:10.1039/C7NR08354H
 - Flicker noise, ADF + Theil-Sen: Morris et al., J. Phys. Chem. C 129, 4097 (2025), doi:10.1021/acs.jpcc.4c07780
 - 2D correlation: Makk et al., ACS Nano 6, 3411 (2012), doi:10.1021/nn300440f
+- Junction yield: Kamenetska et al., Phys. Rev. Lett. 102, 126803 (2009), doi:10.1103/PhysRevLett.102.126803
+- Single-level model fit: Zotti et al., Small 6, 1529 (2010), doi:10.1002/smll.200902227
+- Transition voltage spectroscopy: Beebe et al., Phys. Rev. Lett. 97, 026801 (2006), doi:10.1103/PhysRevLett.97.026801;
+  Baldea, Phys. Rev. B 85, 035442 (2012), doi:10.1103/PhysRevB.85.035442
 - Clustering: Lemmer et al., Nat. Commun. 7, 12922 (2016), doi:10.1038/ncomms12922;
   Cabosart et al., Appl. Phys. Lett. 114, 143102 (2019), doi:10.1063/1.5089198
 
-Full reference list in the manual, chapter 15.
+Full reference list in the manual, chapter 15 (what to cite for which analysis: 15.7).
 
 ## License
 

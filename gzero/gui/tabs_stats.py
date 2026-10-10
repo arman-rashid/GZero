@@ -1,4 +1,4 @@
-"""Histogram, plateau length, correlation and clustering tabs."""
+"""Histogram, plateau length, junction statistics, correlation and clustering tabs."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from dataclasses import dataclass, asdict
 import numpy as np
 from PySide6.QtWidgets import QComboBox, QFormLayout, QGroupBox, QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout
 
-from .. import analysis as an, clustering as cl, figures as figs
+from .. import analysis as an, clustering as cl, figures as figs, junctions as jn
 from .. import export as ex
 from .base import AnalysisTab
 from .widgets import PlotPanel, SettingsForm, error_box, make_button, scroll_panel
@@ -348,6 +348,102 @@ class PlateauTab(AnalysisTab):
             lines.append(f"tunnelling beta median = {r['beta']['beta_median']:.6g} 1/nm ({r['beta']['n']} traces)")
         ex.save_summary(folder, lines, os.path.basename(f2))
         return [f1, f2]
+
+
+# Junction statistics
+
+JUNCTION_LABELS = {"g_lo": "molecular window from (log G)", "g_hi": "molecular window to (log G)",
+                   "max_slope": "flat if slope below (dec/nm)", "slope_window": "slope over (nm)",
+                   "min_plateau": "junction if flat length above (nm)", "block_size": "traces per block",
+                   "g_bins": "conductance bins"}
+JUNCTION_TIPS = {
+    "max_slope": "Molecular plateaus fall well under 1 decade/nm, tunnelling about 4-9 decades/nm "
+                 "(beta / ln 10). Points flatter than this count as plateau.",
+    "slope_window": "Distance over which the local slope is measured; longer is smoother.",
+    "min_plateau": "A trace counts as a molecular junction if it is flat inside the window for at least "
+                   "this distance.",
+    "block_size": "Consecutive traces grouped for the yield and conductance against trace number.",
+}
+
+
+class JunctionTab(AnalysisTab):
+    title = "Junction statistics"
+
+    def __init__(self, project, main):
+        super().__init__(project, main)
+        self.form = SettingsForm("Plateau detection", jn.JunctionSettings(), JUNCTION_LABELS, tips=JUNCTION_TIPS)
+        self.forms["junctions"] = self.form
+        self.selector = ClusterSelector(project)
+        self.result_label = QLabel("")
+        self.result_label.setWordWrap(True)
+        info = QLabel("Per trace: is there a flat molecular plateau, how long is it and at what conductance. "
+                      "The junction yield is the fraction of traces with a plateau (Kamenetska et al., "
+                      "PRL 2009); against trace number it shows drifts during the measurement.")
+        info.setWordWrap(True)
+        self.layout_.addWidget(scroll_panel(_data_box(self.selector), self.form,
+                                            make_button("Use peak from histogram fit", self.peak_from_histogram,
+                                                        "Sets the window to the fitted peak centre +/- 3 sigma."),
+                                            make_button("Calculate", self.update), self.result_label, info))
+        self.plot = PlotPanel()
+        self.layout_.addWidget(self.plot, 1)
+        self.res = None
+        self.label = "all"
+
+    def peak_from_histogram(self):
+        peaks = self.main.tab("Histograms").last_peaks
+        if not peaks:
+            error_box(self, self.title, "Fit the molecular peak in the Histograms tab first (Fit peaks).")
+            return
+        cur = self.form_value("junctions")
+        if cur is None:
+            return
+        p = max(peaks[0], key=lambda q: q.amplitude)
+        cur.g_lo, cur.g_hi = round(p.center - 3 * p.sigma, 3), round(p.center + 3 * p.sigma, 3)
+        self.form.set_value(cur)
+        self.status(f"Window set to [{cur.g_lo:g}, {cur.g_hi:g}]")
+
+    def update(self):
+        s = self.form_value("junctions")
+        if s is None:
+            return
+        if s.g_hi <= s.g_lo:
+            error_box(self, self.title, "The window must go from low to high log G.")
+            return
+        traces = self.selector.traces()
+        if not traces:
+            error_box(self, self.title, "No accepted traces. Detect the traces in the Data & Traces tab first.")
+            return
+        self.label = self.selector.label()
+        self.background(jn.analyse, traces, s, on_done=self._done, busy="Looking for plateaus ...")
+
+    def _done(self, res):
+        self.res = res
+        self.result_label.setText("<br>".join(res.summary_lines()))
+        self.plot.show_panels(self.panels(), 3)
+
+    def panels(self):
+        return figs.junctions(self.res) if self.res is not None else []
+
+    def figure_prefix(self, prefix):
+        return f"{prefix}_{self.label}" if self.res is not None and self.label != "all" else prefix
+
+    def has_results(self):
+        return self.res is not None and self.res.n > 0
+
+    def export(self, folder, prefix):
+        if not self.has_results():
+            return []
+        r = self.res
+        tag = self.figure_prefix(prefix)
+        f1 = os.path.join(folder, f"{tag}_junctions.txt")
+        ex.save_columns(f1, ["trace", "junction", "plateau_length_nm", "plateau_logG_G0"],
+                        r.index, r.junction.astype(int), r.length, r.logG)
+        bl = r.blocks()
+        f2 = os.path.join(folder, f"{tag}_junction_blocks.txt")
+        ex.save_columns(f2, ["mean_trace", "yield", "yield_se", "median_logG", "traces"], *bl.T)
+        f3 = ex.save_summary(folder, r.summary_lines() + ["settings: " + str(r.settings.to_dict())],
+                             f"{tag}_junction_summary.txt")
+        return [f1, f2, f3]
 
 
 # 2D cross-correlation

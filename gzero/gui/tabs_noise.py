@@ -7,7 +7,7 @@ import os
 import numpy as np
 from PySide6.QtWidgets import QComboBox, QFormLayout, QGroupBox, QHBoxLayout, QLabel, QSpinBox, QVBoxLayout, QWidget
 
-from .. import export as ex, figures as figs, iv, modulation as md, noise as nz, style
+from .. import export as ex, figures as figs, iv, ivmodels as ivm, modulation as md, noise as nz, style
 from .base import AnalysisTab
 from .widgets import PlotPanel, SettingsForm, decimate_for_plot, error_box, make_button, scroll_panel
 
@@ -286,6 +286,16 @@ IV_LABELS = {"min_amplitude": "min sweep amplitude (V)", "smooth_points": "smoot
              "poly_order": "polynomial order", "v_min": "curve must reach V below",
              "v_max": "curve must reach V above", "v_bins": "V bins", "i_bins": "I bins",
              "log_current": "log |I| histogram"}
+IVM_LABELS = {"fit_v_max": "fit only |V| below (V, empty = all)", "fit_asymmetry": "fit asymmetry a",
+              "n_molecules": "molecules in parallel N", "tvs_v_min": "TVS: ignore |V| below (V)",
+              "max_curves": "fit at most N single curves"}
+IVM_TIPS = {
+    "fit_v_max": "The single-level model holds while the level is outside the bias window; "
+                 "restrict the fit if the curves go much further.",
+    "fit_asymmetry": "Lets the level move with the bias, e(V) = eps0 + a V. Off: symmetric junction (a = 0).",
+    "n_molecules": "N in I = N G0 Gamma [...]. Keep 1 for single-molecule junctions.",
+    "tvs_v_min": "Below this the current is too small for a stable V^2/|I|.",
+}
 
 
 class IVTab(AnalysisTab):
@@ -296,14 +306,27 @@ class IVTab(AnalysisTab):
         self.rec = QComboBox()
         self.form = SettingsForm("I-V sweeps", iv.IVSettings(), IV_LABELS)
         self.forms["iv"] = self.form
+        self.model_form = SettingsForm("Single-level model and TVS", ivm.IVModelSettings(), IVM_LABELS,
+                                       tips=IVM_TIPS)
+        self.forms["iv_models"] = self.model_form
         self.result_label = QLabel("Requires a time-resolved bias: a TDMS file with a bias channel, or a text "
                                    "file with a bias column.")
         self.result_label.setWordWrap(True)
+        self.model_label = QLabel("")
+        self.model_label.setWordWrap(True)
+        info = QLabel("Single-level model: one level at eps0 with coupling Gamma (Lorentzian transmission). "
+                      "TVS: V<sub>t</sub> is the minimum of the Fowler-Nordheim plot; for this model "
+                      "eps0 = (&radic;3/2) V<sub>t</sub> (Baldea 2012).")
+        info.setWordWrap(True)
         self.layout_.addWidget(scroll_panel(_recording_box(self, self.rec), self.form,
-                                            make_button("Analyse I-V", self.run), self.result_label))
+                                            make_button("Analyse I-V", self.run), self.result_label,
+                                            self.model_form,
+                                            make_button("Fit single-level model + TVS", self.run_models),
+                                            self.model_label, info))
         self.plot = PlotPanel()
         self.layout_.addWidget(self.plot, 1)
         self.curves = []
+        self.models = None
 
     def run(self):
         s = self.form_value("iv")
@@ -315,18 +338,41 @@ class IVTab(AnalysisTab):
 
     def _done(self, curves, s):
         self.curves, self.s = curves, s
+        self.models = None
+        self.model_label.setText("")
         nf = sum(c.direction == "forward" for c in curves)
         if curves:
             self.result_label.setText(f"{len(curves)} curves ({nf} forward, {len(curves) - nf} backward)")
         else:
             self.result_label.setText("No bias sweeps were found in this recording (the bias is constant or "
                                       "varies less than the minimum sweep amplitude).")
-        self.plot.show_panels(self.panels(), 2)
+        self._draw()
+
+    def run_models(self):
+        ms = self.form_value("iv_models")
+        if ms is None:
+            return
+        if not self.curves:
+            error_box(self, self.title, "Find the I-V curves first (Analyse I-V).")
+            return
+        self.background(ivm.analyse, self.curves, ms, iv.mean_curve, on_done=self._models_done,
+                        busy="Fitting the single-level model ...")
+
+    def _models_done(self, res):
+        self.models = res
+        self.model_label.setText("<br>".join(res.summary_lines()) or "No fit converged.")
+        self._draw()
+
+    def _draw(self):
+        self.plot.show_panels(self.panels(), 3 if self.models else 2)
 
     def panels(self):
         if not self.curves:
             return []
-        return figs.iv(self.curves, self.s, iv.iv_hist2d, iv.mean_curve)
+        panels = figs.iv(self.curves, self.s, iv.iv_hist2d, iv.mean_curve)
+        if self.models is not None:
+            panels += figs.iv_models(self.models, ivm.slm_current, ivm.fowler_nordheim)
+        return panels
 
     def has_results(self):
         return bool(self.curves)
@@ -350,6 +396,17 @@ class IVTab(AnalysisTab):
             p = os.path.join(sub, f"IV_Curves_{tag}.txt")
             ex.save_columns(p, names, *cols)
             files.append(p)
+        m = self.models
+        if m is not None:
+            p = os.path.join(folder, f"{prefix}_IV_models.txt")
+            ex.save_columns(p, ["curve", "forward", "G_low_G0", "Vt_plus_V", "Vt_minus_V", "eps0_TVS_eV", "a_TVS",
+                                "eps0_SLM_eV", "eps0_err", "Gamma_SLM_eV", "Gamma_err", "a_SLM", "R2"],
+                            m.index, m.direction == "forward", m.g_low, m.v_plus, m.v_minus, m.eps_tvs, m.a_tvs,
+                            m.column("eps0"), m.column("eps0_err"), m.column("Gamma"), m.column("Gamma_err"),
+                            m.column("a"), m.column("r2"))
+            files.append(p)
+            files.append(ex.save_summary(folder, m.summary_lines() + ["settings: " + str(m.settings.to_dict())],
+                                         f"{prefix}_IV_models_summary.txt"))
         return files
 
 

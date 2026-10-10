@@ -345,3 +345,131 @@ def modulation(rec, r, spectrum_fn) -> list[Panel]:
             ax.set_ylabel("Windows")
         panels += [Panel("modulation_beta_vs_G", beta_g), Panel("modulation_beta_histogram", beta_h)]
     return panels
+
+
+def iv_models(res, slm_fn, fn_fn) -> list[Panel]:
+    """Single-level fit and transition voltage spectroscopy (ivmodels.analyse result)."""
+    panels = []
+    colors = {"forward": "k", "backward": PALETTE[3]}
+    if res.mean:
+        def slm(fig, ax):
+            for d, (vg, m, f, _, _) in res.mean.items():
+                ax.plot(vg, m * 1e9, ".", ms=1.5 if is_export(ax) else 2.5, color=colors[d], alpha=0.5,
+                        label=f"Mean {d}")
+                if f.ok:
+                    ax.plot(vg, slm_fn(vg, f.eps0, f.Gamma, f.a, res.settings.n_molecules) * 1e9,
+                            color=PALETTE[0] if d == "forward" else PALETTE[1], lw=1.0,
+                            label=f"SLM: $\\varepsilon_0$ = {f.eps0:.2f} eV, $\\Gamma$ = {1e3 * f.Gamma:.2g} meV")
+            ax.set_xlabel("Bias (V)")
+            ax.set_ylabel("Current (nA)")
+            ax.legend()
+
+        def fn(fig, ax):
+            for d, (vg, m, _, vp, vm) in res.mean.items():
+                for side, (x, y) in fn_fn(vg, m, res.settings.tvs_v_min).items():
+                    ax.plot(x, y, lw=0.8, color=colors[d], ls="-" if side == "positive" else "--",
+                            label=f"{d}, {side} bias")
+                for vt in (vp, vm):
+                    if np.isfinite(vt):
+                        ax.axvline(1 / vt, color=colors[d], lw=0.5, ls=":")
+            ax.set_xlabel("1/V (V$^{-1}$)")
+            ax.set_ylabel("ln(|I|/V$^2$)")
+            ax.legend(loc="lower right")
+            title(ax, "Fowler-Nordheim plot (minimum at 1/V$_t$)")
+        panels += [Panel("IV_SLM_fit", slm), Panel("IV_Fowler_Nordheim", fn)]
+
+    vp, vm = res.v_plus[np.isfinite(res.v_plus)], res.v_minus[np.isfinite(res.v_minus)]
+    if len(vp) or len(vm):
+        def vt(fig, ax):
+            allv = np.r_[vp, np.abs(vm)]
+            edges = np.linspace(allv.min(), allv.max(), 40) if np.ptp(allv) > 0 else 20
+            if len(vp):
+                ax.hist(vp, edges, histtype="step", color=PALETTE[0], lw=1.0, label=f"V$_t^+$, median {np.median(vp):.2f} V")
+            if len(vm):
+                ax.hist(np.abs(vm), edges, histtype="step", color=PALETTE[1], lw=1.0,
+                        label=f"|V$_t^-$|, median {np.median(np.abs(vm)):.2f} V")
+            ax.set_xlabel("Transition voltage (V)")
+            ax.set_ylabel("Curves")
+            ax.legend()
+        panels.append(Panel("IV_transition_voltage_histogram", vt))
+
+    eps, gam = res.column("eps0"), res.column("Gamma")
+    ok = np.isfinite(eps) & np.isfinite(gam) & (gam > 0)
+    if ok.sum() >= 2:
+        def params(fig, ax):
+            ax.scatter(eps[ok], 1e3 * gam[ok], s=2 if is_export(ax) else 5, color=PALETTE[0], linewidths=0,
+                       alpha=0.7)
+            ax.set_yscale("log")
+            ax.set_xlabel(r"$\varepsilon_0$ (eV)")
+            ax.set_ylabel(r"$\Gamma$ (meV)")
+            title(ax, f"SLM fit of {ok.sum()} curves")
+
+        def eps_hist(fig, ax):
+            et = res.eps_tvs[np.isfinite(res.eps_tvs)]
+            both = np.r_[eps[ok], et]
+            edges = np.linspace(both.min(), both.max(), 40) if np.ptp(both) > 0 else 20
+            ax.hist(eps[ok], edges, histtype="step", color=PALETTE[0], lw=1.0,
+                    label=f"SLM fit, median {np.median(eps[ok]):.2f} eV")
+            if len(et):
+                ax.hist(et, edges, histtype="step", color=PALETTE[2], lw=1.0,
+                        label=f"from V$_t$, median {np.median(et):.2f} eV")
+            ax.set_xlabel(r"$\varepsilon_0$ (eV)")
+            ax.set_ylabel("Curves")
+            ax.legend()
+        panels += [Panel("IV_SLM_parameters", params), Panel("IV_eps0_histogram", eps_hist)]
+    return panels
+
+
+# Junction statistics
+
+def junctions(res) -> list[Panel]:
+    s = res.settings
+    j = res.junction
+    p, se = res.yield_()
+    bl = res.blocks()
+
+    def g_hist(fig, ax):
+        g = res.logG[j]
+        ax.hist(g, np.linspace(s.g_lo, s.g_hi, s.g_bins + 1), color="0.6")
+        if len(g):
+            ax.axvline(np.median(g), color=PALETTE[3], lw=1.0,
+                       label=f"median {np.median(g):.2f} ({10 ** np.median(g):.2e} G$_0$)")
+            ax.legend()
+        ax.set_xlabel(f"Plateau {LOGG}")
+        ax.set_ylabel("Traces")
+        title(ax, f"{int(j.sum())} of {res.n} traces with a plateau")
+
+    def g_vs_n(fig, ax):
+        ax.plot(res.index[j], res.logG[j], ".", ms=1.5 if is_export(ax) else 2.5, color=PALETTE[0], alpha=0.5)
+        if len(bl):
+            ax.plot(bl[:, 0], bl[:, 3], "o-", color="k", ms=3, lw=0.8, label=f"Median per {s.block_size} traces")
+            ax.legend()
+        ax.set_xlabel("Trace number")
+        ax.set_ylabel(f"Plateau {LOGG}")
+
+    def yield_vs_n(fig, ax):
+        if len(bl):
+            ax.errorbar(bl[:, 0], 100 * bl[:, 1], yerr=100 * bl[:, 2], fmt="o-", color="k", ms=3, lw=0.8,
+                        capsize=2)
+        ax.axhline(100 * p, color=PALETTE[3], lw=0.8, ls="--", label=f"All: {100 * p:.1f} $\\pm$ {100 * se:.1f} %")
+        ax.set_ylim(0, 100)
+        ax.set_xlabel("Trace number")
+        ax.set_ylabel("Junction yield (%)")
+        ax.legend()
+
+    def length_hist(fig, ax):
+        top = max(1.0, float(np.percentile(res.length, 99))) if res.n else 1.0
+        ax.hist(res.length, np.linspace(0, top, 50), color="0.6")
+        ax.axvline(s.min_plateau, color=PALETTE[3], lw=0.8, ls="--", label=f"threshold {s.min_plateau:g} nm")
+        ax.set_xlabel("Flat plateau length (nm)")
+        ax.set_ylabel("Traces")
+        ax.legend()
+
+    def length_vs_g(fig, ax):
+        ax.plot(res.logG[j], res.length[j], ".", ms=1.5 if is_export(ax) else 2.5, color=PALETTE[0], alpha=0.6)
+        ax.set_xlabel(f"Plateau {LOGG}")
+        ax.set_ylabel("Plateau length (nm)")
+
+    return [Panel("junction_plateau_conductance_histogram", g_hist), Panel("junction_conductance_vs_trace", g_vs_n),
+            Panel("junction_yield_vs_trace", yield_vs_n), Panel("junction_plateau_length_histogram", length_hist),
+            Panel("junction_length_vs_conductance", length_vs_g)]
