@@ -1,0 +1,57 @@
+# Builds the Windows version and publishes a GitHub release when a tag v* is pushed.
+# The release text comes from .github/release-notes/<tag>.md.
+name: Windows release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and release (e.g. v1.4)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Build exe
+        run: python build_exe.py
+
+      - name: Self-test of the built exe
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath "dist\GZero\GZero.exe" -ArgumentList "--selftest", "selftest_report.txt" -Wait -PassThru
+          Get-Content selftest_report.txt
+          if ((Get-Content selftest_report.txt -Tail 1) -ne "SELFTEST OK") { exit 1 }
+
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path dist\GZero -DestinationPath "GZero-$env:TAG-windows-x64.zip"
+
+      - name: Publish release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $notes = ".github/release-notes/$env:TAG.md"
+          if (-not (Test-Path $notes)) { "GZero $env:TAG" | Set-Content $notes }
+          gh release create $env:TAG "GZero-$env:TAG-windows-x64.zip" selftest_report.txt --title "GZero $env:TAG" --notes-file $notes
