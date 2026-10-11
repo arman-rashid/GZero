@@ -665,3 +665,62 @@ def egain(r, beta=None, slm_fn=None) -> list[Panel]:
             ax.legend()
         panels.append(Panel("egain_beta", bplot))
     return panels
+
+
+# Thermopower
+
+def thermo(r) -> list[Panel]:
+    """r = thermo.ThermoResult."""
+    from .thermo import gauss_peak
+    s = r.settings
+
+    def hists(fig, ax):
+        for k, d in enumerate(r.dT_levels):
+            m, sg, _, h = gauss_peak(r.groups[d], s.v_bins)
+            if h is None:
+                continue
+            c, n, f = h
+            ax.step(c, n, where="mid", color=_color(k), lw=0.8, label=f"$\\Delta T$ = {d:g} K")
+            ax.plot(c, f, color=_color(k), lw=0.6, ls="--")
+        ax.set_xlabel(r"Thermovoltage ($\mu$V)")
+        ax.set_ylabel(s.unit.capitalize())
+        ax.legend()
+
+    def v_dt(fig, ax):
+        ax.errorbar(r.dT_levels, r.v_peak, yerr=r.v_sigma, fmt="none", ecolor="0.7", lw=0.8, capsize=0)
+        ax.errorbar(r.dT_levels, r.v_peak, yerr=r.v_err, fmt="o", color="k", ms=3, capsize=2)
+        if np.isfinite(r.slope):
+            x = np.linspace(min(0.0, r.dT_levels.min()), r.dT_levels.max(), 50)
+            ax.plot(x, r.intercept + r.slope * x, color=PALETTE[3], lw=1.0,
+                    label=f"S = {r.S:.2f} $\\pm$ {r.S_err:.2f} $\\mu$V/K")
+            ax.legend()
+        ax.axhline(0, color="0.8", lw=0.5)
+        ax.set_xlabel(r"$\Delta T$ (K)")
+        ax.set_ylabel(r"Most probable thermovoltage ($\mu$V)")
+        title(ax, r"Peak $\pm$ SE (black), $\pm\sigma$ (grey)")
+
+    panels = [Panel("thermo_voltage_histograms", hists), Panel("thermo_voltage_vs_dT", v_dt)]
+    if len(r.S_values) >= 3:
+        def s_hist(fig, ax):
+            m, sg, _, h = gauss_peak(r.S_values, s.s_bins)
+            if h is not None:
+                c, n, f = h
+                ax.bar(c, n, width=c[1] - c[0], color="0.7")
+                ax.plot(c, f, color=PALETTE[3], lw=1.0, label=f"peak {m:.2f} $\\mu$V/K, $\\sigma$ {sg:.2f}")
+                ax.legend()
+            ax.axvline(0, color="0.5", lw=0.5)
+            ax.set_xlabel(r"Seebeck coefficient S ($\mu$V/K)")
+            ax.set_ylabel(s.unit.capitalize())
+        panels.append(Panel("thermo_seebeck_histogram", s_hist))
+        if r.S_logG is not None and np.isfinite(r.S_logG).sum() >= 10:
+            def s_g(fig, ax):
+                ok = np.isfinite(r.S_logG) & np.isfinite(r.S_values)
+                lo, hi = np.percentile(r.S_values[ok], [1, 99])
+                H, xe, ye = np.histogram2d(r.S_logG[ok], r.S_values[ok], [40, np.linspace(lo, hi, 41)])
+                m = ax.pcolormesh(0.5 * (xe[1:] + xe[:-1]), 0.5 * (ye[1:] + ye[:-1]), H.T, cmap="viridis",
+                                  shading="nearest", rasterized=True)
+                _colorbar(fig, ax, m, "Counts")
+                ax.set_xlabel(LOGG)
+                ax.set_ylabel(r"S ($\mu$V/K)")
+            panels.append(Panel("thermo_seebeck_vs_logG", s_g, aspect=0.8))
+    return panels

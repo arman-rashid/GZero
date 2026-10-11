@@ -39,7 +39,8 @@ from . import ivmodels as ivm
 
 @dataclass
 class EGaInSettings:
-    v_column: str = "0"
+    layout: str = "one junction per file"   # or "column pairs V, I, V, I, ..."
+    v_column: str = "0"                # one junction per file: which columns
     current_column: str = "1"
     current_unit: str = "A"            # "A" | "mA" | "uA" | "nA" | "A/cm2" (already J)
     contact_diameter_um: float = 25.0  # EGaIn tip contact diameter
@@ -79,18 +80,51 @@ class Dataset:
     length: float | None = None      # molecular length (nm, A or carbon number) for beta
 
 
-def load_junction(path: str, s: EGaInSettings) -> Junction:
-    tab = bj_io.read_table(path)
-    V = tab.get(s.v_column)
-    I = tab.get(s.current_column)
-    if V is None or I is None:
-        raise ValueError(f"{os.path.basename(path)}: bias or current column missing.")
+LAYOUTS = ["one junction per file", "column pairs V, I, V, I, ..."]
+
+
+def _junction(name, V, I, s: EGaInSettings):
     n = min(len(V), len(I))
     V, I = np.asarray(V[:n], float), np.asarray(I[:n], float)
     scale = UNIT_SCALE.get(s.current_unit, 1.0)
     J = I if scale is None else I * scale / s.area()
     ok = np.isfinite(V) & np.isfinite(J)
-    return Junction(os.path.splitext(os.path.basename(path))[0], V[ok], J[ok])
+    return Junction(name, V[ok], J[ok])
+
+
+def load_junctions(path: str, s: EGaInSettings) -> list[Junction]:
+    """Junctions in one file.
+
+    "one junction per file": the bias and current columns chosen in the settings.
+    "column pairs": columns 0/1, 2/3, 4/5 ... are (bias, current) of one junction each;
+    pairs of different length are fine (shorter columns end in empty cells).
+    """
+    tab = bj_io.read_table(path)
+    base = os.path.splitext(os.path.basename(path))[0]
+    if s.layout.startswith("column pairs"):
+        cols = list(tab.columns.values())
+        if len(cols) < 2:
+            raise ValueError(f"{os.path.basename(path)}: needs at least two columns (V, I).")
+        if len(cols) % 2:
+            cols = cols[:-1]            # a lone last column has no partner
+        out = []
+        for k in range(0, len(cols), 2):
+            jn = _junction(f"{base}_{k // 2 + 1}", cols[k], cols[k + 1], s)
+            if len(jn.V) >= 4:
+                out.append(jn)
+        if not out:
+            raise ValueError(f"{os.path.basename(path)}: no (V, I) column pair with data.")
+        return out
+    V = tab.get(s.v_column)
+    I = tab.get(s.current_column)
+    if V is None or I is None:
+        raise ValueError(f"{os.path.basename(path)}: bias or current column missing.")
+    return [_junction(base, V, I, s)]
+
+
+def load_junction(path: str, s: EGaInSettings) -> Junction:
+    """The first junction of a file (kept for scripts written against older versions)."""
+    return load_junctions(path, s)[0]
 
 
 def split_sweeps(V: np.ndarray, min_points: int = 4) -> list[tuple[int, int]]:

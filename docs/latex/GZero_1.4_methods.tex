@@ -179,6 +179,9 @@ Events & New tab & Which traces flicker or switch mechanically? &
 \texttt{gzero/\allowbreak{}events.py} \\
 EGaIn (ensemble) & New tab & Statistics of large-area junctions, yield,
 rectification and $\beta$ & \texttt{gzero/\allowbreak{}egain.py} \\
+Thermopower & New tab & What is the Seebeck coefficient, and is
+transport through the HOMO or the LUMO? &
+\texttt{gzero/\allowbreak{}thermo.py} \\
 \end{longtable}
 
 One existing function got a fix along the way. The averaged I-V curve
@@ -605,6 +608,66 @@ The first version weighted $\beta$ by $\sigma_\mathrm{log}$ and claimed
 errors 3 times too small. Weighting by the standard error fixed that,
 which is what the coverage row shows.
 
+\textbf{File layouts.} A file is either one junction (bias and current
+columns chosen in the settings) or many junctions as column pairs V, I,
+V, I, \ldots{} Pairs may differ in length.
+
+\hypertarget{thermopower-tab}{%
+\section{Thermopower tab}\label{thermopower-tab}}
+
+The tab takes the thermoelectric voltage and the temperature (or
+temperature difference) of every sample and follows
+\href{https://doi.org/10.1126/science.1137149}{Reddy et al.~2007} and
+\href{https://doi.org/10.1021/nl203634m}{Widawsky et al.~2012}:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Group the samples (or the file means, one per junction) by dT and fit
+  a Gaussian to the thermovoltage histogram at every dT.
+\item
+  Fit the most probable voltage against dT with a straight line; the
+  slope gives S (formula below). S \textgreater{} 0 means hole transport
+  (HOMO), S \textless{} 0 electron transport (LUMO).
+\item
+  Histogram S\_i = -V\_i/dT\_i + S\_electrode of every sample, and plot
+  it against log G when a conductance column is given.
+\end{enumerate}
+
+\[
+S = -\frac{dV}{d(\Delta T)} + S_\mathrm{electrode}
+\]
+
+The error of each peak comes from a bootstrap over the files, because
+the samples of one trace aren't independent. The temperature column can
+hold dT, the hot-side temperature (dT = T - T\_ref), or be absent, in
+which case each data set gets its own dT.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3869}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2634}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3197}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Check (simulated junctions)
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+True
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Found
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+S, 160 traces at dT = 0-30 K & 12 uV/K & 11.9 +/- 0.4 uV/K \\
+S, negative & -8 uV/K & -8.1 +/- 0.4 uV/K \\
+Real files: V in mV, hot-side T, G window & -6 uV/K & -5.9 +/- 0.5
+uV/K \\
+Error coverage, 30 repeats & 68 \% within 1 $\sigma$ & 80 \% (slightly
+conservative) \\
+\end{longtable}
+
 \hypertarget{open-source-code-reviewed}{%
 \section{Open-source code reviewed}\label{open-source-code-reviewed}}
 
@@ -656,7 +719,7 @@ gating need measurement types GZero doesn't read yet.
 Code: \href{https://github.com/arman-rashid/GZero}{arman-rashid/GZero},
 release v1.4. The full method description is in the user manual
 (\texttt{docs/\allowbreak{}User\_\allowbreak{}Manual.pdf}), sections
-5.2, 6.4, 9.5, 9.8 and 10.2-10.5, references 26-35.
+5.2, 6.4, 9.5, 9.8 and 10.2-10.6, references 26-37.
 
 \begin{itemize}
 \tightlist
@@ -693,6 +756,14 @@ release v1.4. The full method description is in the user manual
   effective electrical contact area for EGaIn-based molecular tunneling
   junctions'', J. Am. Chem. Soc. 135, 18131 (2013).
   \href{https://doi.org/10.1021/ja408652h}{doi:10.1021/ja408652h}
+\item
+  P. Reddy et al., ``Thermoelectricity in molecular junctions'', Science
+  315, 1568 (2007).
+  \href{https://doi.org/10.1126/science.1137149}{doi:10.1126/science.1137149}
+\item
+  J. R. Widawsky et al., ``Simultaneous determination of conductance and
+  thermopower of single molecule junctions'', Nano Lett. 12, 354 (2012).
+  \href{https://doi.org/10.1021/nl203634m}{doi:10.1021/nl203634m}
 \item
   E. M. Opodi et al., ``A single level tunneling model for molecular
   junctions: evaluating the simulation methods'', Phys. Chem. Chem.

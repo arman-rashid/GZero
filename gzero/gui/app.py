@@ -24,6 +24,7 @@ from .. import export as ex
 from .project import Project
 from .tabs_data import ConvertTab, DataTab, SimulationTab
 from .tabs_egain import EGaInTab
+from .tabs_thermo import ThermoTab
 from .tabs_noise import EventsTab, IVTab, ModulationTab, NoiseTab
 from .tabs_stats import ClusterTab, CorrelationTab, HistogramTab, JunctionTab, PlateauTab
 from .widgets import error_box
@@ -55,7 +56,9 @@ spectroscopy (Beebe 2006, Baldea 2012).</li>
 (Rashid et al., JACS 2025).</li>
 <li><b>EGaIn (ensemble)</b>: large-area junctions, Gaussian log|J| statistics with junction-based
 confidence intervals, yield, rectification, V<sub>trans</sub>, single-level fit and beta from a length series
-(Reus 2012; XMe, Hong group; GaussFit, Chiechi group).</li>
+(Reus 2012; XMe, Hong group; GaussFit, Chiechi group); one junction per file or V, I column pairs.</li>
+<li><b>Thermopower</b>: thermovoltage histograms per temperature difference, Seebeck coefficient from the
+slope of the most probable voltage (Reddy 2007, Widawsky 2012), S histogram and S against conductance.</li>
 <li><b>Piezo modulation</b> (lock-in beta), <b>Simulation</b> (synthetic ground truth).</li>
 </ul>"""
 
@@ -77,7 +80,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.tabs)
         self._tabs = {}
         for cls in (ConvertTab, DataTab, HistogramTab, PlateauTab, JunctionTab, CorrelationTab, ClusterTab,
-                    NoiseTab, EventsTab, IVTab, ModulationTab, EGaInTab, SimulationTab):
+                    NoiseTab, EventsTab, IVTab, ModulationTab, EGaInTab, ThermoTab,
+                    SimulationTab):
             tab = cls(self.project, self)
             self._tabs[tab.title] = tab
             self.tabs.addTab(tab, tab.title)

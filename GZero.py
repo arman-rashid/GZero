@@ -55,6 +55,16 @@ def selftest(report_path):
     sets = [eg.analyse(eg.Dataset(f"C{L}", eg.simulate(length=L, seed=L), L), eg.EGaInSettings()) for L in (10, 14, 18)]
     b = eg.fit_beta(sets, -0.5)
     lines.append(f"EGaIn beta {b['beta']:.3f} +/- {b['beta_err']:.3f} (truth 0.9), yield {sets[0].n_working}/{sets[0].n_junctions}")
+    from gzero import thermo as th
+    tr_ = th.analyse(th.ThermoDataset("sim", th.simulate(S=10.0, seed=0)), th.ThermoSettings(bootstrap=20))
+    lines.append(f"thermopower S {tr_.S:.2f} +/- {tr_.S_err:.2f} uV/K (truth 10)")
+    import tempfile as _tf
+    with _tf.TemporaryDirectory() as tmp:
+        js = eg.simulate(n_junctions=3, length=12, seed=1, p_short=0)
+        cols = [c for j in js for c in (j.V, j.J * eg.EGaInSettings().area())]
+        np.savetxt(os.path.join(tmp, "pairs.txt"), np.column_stack(cols), delimiter="\t")
+        jp = eg.load_junctions(os.path.join(tmp, "pairs.txt"), eg.EGaInSettings(layout=eg.LAYOUTS[1]))
+    lines.append(f"EGaIn column pairs: {len(jp)} junctions from one file")
     from gzero import bj_io, conversion as cv
     logG = np.linspace(0.5, -6, 5000)
     Vb = 0.1 + 0.01 * np.sin(np.arange(5000) / 50)
@@ -74,7 +84,7 @@ def selftest(report_path):
               figures.histogram_2d(zc, gc, H2, "per trace")] + figures.noise(r, sc, ns, H[0], 0) \
         + figures.junctions(jr) + figures.iv_models(mr, ivm.slm_current, ivm.fowler_nordheim) \
         + figures.events(er, None, evm.time_histogram(H, evm.EventSettings())) \
-        + figures.egain(sets[0], b, ivm.slm_current)
+        + figures.egain(sets[0], b, ivm.slm_current) + figures.thermo(tr_)
     with tempfile.TemporaryDirectory() as tmp:
         files = style.export_panels(panels, tmp, "selftest", style.FigureSettings())
         sizes = [os.path.getsize(f) for f in files]

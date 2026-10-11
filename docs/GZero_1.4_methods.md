@@ -15,6 +15,7 @@ Each new method answers a question the existing tabs couldn't. All of them run o
 | Transition voltage spectroscopy | I-V tab | Where does the Fowler-Nordheim plot turn over, and what level position does that imply? | `gzero/ivmodels.py` |
 | Events | New tab | Which traces flicker or switch mechanically? | `gzero/events.py` |
 | EGaIn (ensemble) | New tab | Statistics of large-area junctions, yield, rectification and beta | `gzero/egain.py` |
+| Thermopower | New tab | What is the Seebeck coefficient, and is transport through the HOMO or the LUMO? | `gzero/thermo.py` |
 
 One existing function got a fix along the way. The averaged I-V curve used to take the overlap of all sweeps, so the half sweeps at the start and end of a recording could shrink it to nothing. It now averages only sweeps that cover the typical bias range.
 
@@ -176,6 +177,29 @@ Large-area junctions are analysed per junction, not per sweep. 20 junctions with
 
 The first version weighted beta by sigma_log and claimed errors 3 times too small. Weighting by the standard error fixed that, which is what the coverage row shows.
 
+**File layouts.** A file is either one junction (bias and current columns chosen in the settings) or many junctions as column pairs V, I, V, I, ... Pairs may differ in length.
+
+## Thermopower tab
+
+The tab takes the thermoelectric voltage and the temperature (or temperature difference) of every sample and follows [Reddy et al. 2007](https://doi.org/10.1126/science.1137149) and [Widawsky et al. 2012](https://doi.org/10.1021/nl203634m):
+
+1. Group the samples (or the file means, one per junction) by dT and fit a Gaussian to the thermovoltage histogram at every dT.
+2. Fit the most probable voltage against dT with a straight line; the slope gives S (formula below). S > 0 means hole transport (HOMO), S < 0 electron transport (LUMO).
+3. Histogram S_i = -V_i/dT_i + S_electrode of every sample, and plot it against log G when a conductance column is given.
+
+```latex
+S = -\frac{dV}{d(\Delta T)} + S_\mathrm{electrode}
+```
+
+The error of each peak comes from a bootstrap over the files, because the samples of one trace aren't independent. The temperature column can hold dT, the hot-side temperature (dT = T - T_ref), or be absent, in which case each data set gets its own dT.
+
+| Check (simulated junctions) | True | Found |
+| --- | --- | --- |
+| S, 160 traces at dT = 0-30 K | 12 uV/K | 11.9 +/- 0.4 uV/K |
+| S, negative | -8 uV/K | -8.1 +/- 0.4 uV/K |
+| Real files: V in mV, hot-side T, G window | -6 uV/K | -5.9 +/- 0.5 uV/K |
+| Error coverage, 30 repeats | 68 % within 1 sigma | 80 % (slightly conservative) |
+
 ## Open-source code reviewed
 
 Two public codes cover the same ground and were read in full for their EGaIn and I-V methods.
@@ -189,7 +213,7 @@ GZero already covers the other Hong-group analyses in XMe: correlation, spectral
 
 ## Sources
 
-Code: [arman-rashid/GZero](https://github.com/arman-rashid/GZero), release v1.4. The full method description is in the user manual (`docs/User_Manual.pdf`), sections 5.2, 6.4, 9.5, 9.8 and 10.2-10.5, references 26-35.
+Code: [arman-rashid/GZero](https://github.com/arman-rashid/GZero), release v1.4. The full method description is in the user manual (`docs/User_Manual.pdf`), sections 5.2, 6.4, 9.5, 9.8 and 10.2-10.6, references 26-37.
 
 - M. Kamenetska et al., "Formation and evolution of single-molecule junctions", Phys. Rev. Lett. 102, 126803 (2009). [doi:10.1103/PhysRevLett.102.126803](https://doi.org/10.1103/PhysRevLett.102.126803)
 - L. A. Zotti et al., "Revealing the role of anchoring groups in the electrical conduction through single-molecule junctions", Small 6, 1529-1535 (2010). [doi:10.1002/smll.200902227](https://doi.org/10.1002/smll.200902227)
@@ -198,5 +222,7 @@ Code: [arman-rashid/GZero](https://github.com/arman-rashid/GZero), release v1.4.
 - U. Rashid et al., "Mapping the extended ground state reactivity landscape of a photoswitchable molecule at a single molecular level", J. Am. Chem. Soc. 147, 830-840 (2025). [doi:10.1021/jacs.4c13531](https://doi.org/10.1021/jacs.4c13531) (SI sections 2.3-2.7)
 - L. J. Reus et al., "Statistical tools for analyzing measurements of charge transport", J. Phys. Chem. C 116, 6714 (2012). [doi:10.1021/jp210445y](https://doi.org/10.1021/jp210445y)
 - F. C. Simeone et al., "Defining the value of injection current and effective electrical contact area for EGaIn-based molecular tunneling junctions", J. Am. Chem. Soc. 135, 18131 (2013). [doi:10.1021/ja408652h](https://doi.org/10.1021/ja408652h)
+- P. Reddy et al., "Thermoelectricity in molecular junctions", Science 315, 1568 (2007). [doi:10.1126/science.1137149](https://doi.org/10.1126/science.1137149)
+- J. R. Widawsky et al., "Simultaneous determination of conductance and thermopower of single molecule junctions", Nano Lett. 12, 354 (2012). [doi:10.1021/nl203634m](https://doi.org/10.1021/nl203634m)
 - E. M. Opodi et al., "A single level tunneling model for molecular junctions: evaluating the simulation methods", Phys. Chem. Chem. Phys. 24, 11958 (2022). [doi:10.1039/D1CP05807J](https://doi.org/10.1039/D1CP05807J)
 - [XMe_DataAnalysis](https://github.com/Pilab-XMU/XMe_DataAnalysis) and [GaussFit](https://github.com/rchiechi/gaussfit) on GitHub

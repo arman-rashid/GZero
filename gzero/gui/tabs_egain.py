@@ -13,15 +13,18 @@ from .. import bj_io, egain as eg, export as ex, figures as figs, ivmodels as iv
 from .base import AnalysisTab
 from .widgets import PlotPanel, SettingsForm, button_row, error_box, make_button, scroll_panel
 
-EGAIN_LABELS = {"v_column": "bias column", "current_column": "current column", "current_unit": "current unit",
+EGAIN_LABELS = {"layout": "file layout", "v_column": "bias column", "current_column": "current column", "current_unit": "current unit",
                 "contact_diameter_um": "contact diameter (um)", "contact_area_cm2": "contact area (cm2, overrides)",
                 "short_threshold": "short if |J| reaches (A/cm2)", "v_step": "bias grid step (V)",
                 "bins_per_decade": "log|J| bins / decade", "alpha": "CI: 1 - alpha with alpha",
                 "v_report": "report at bias (V)", "fit_slm": "single-level fit of <log|J|>",
                 "temperature": "temperature (K)"}
-EGAIN_CHOICES = {"current_unit": list(eg.UNIT_SCALE)}
+EGAIN_CHOICES = {"current_unit": list(eg.UNIT_SCALE), "layout": eg.LAYOUTS}
 EGAIN_TIPS = {
-    "current_column": "Column number (0 = first) or header name. Every file is one junction.",
+    "layout": "one junction per file: bias and current from the two columns below.\n"
+              "column pairs: columns 0/1, 2/3, 4/5 ... are (bias, current) of one junction each, so one file "
+              "holds many junctions. The bias/current column settings are not used then.",
+    "current_column": "Column number (0 = first) or header name (one junction per file).",
     "current_unit": "A/cm2: the column already holds the current density J.",
     "contact_diameter_um": "J = I / (pi d^2 / 4). Use the measured geometric contact diameter.",
     "short_threshold": "A junction whose |J| ever reaches this is a short: it is counted against the yield and "
@@ -81,7 +84,7 @@ class EGaInTab(AnalysisTab):
         junctions, bad = [], []
         for p in paths:
             try:
-                junctions.append(eg.load_junction(p, s))
+                junctions += eg.load_junctions(p, s)
             except Exception as exc:  # noqa: BLE001
                 bad.append(f"{os.path.basename(p)}: {exc}")
         if bad:

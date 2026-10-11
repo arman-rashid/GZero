@@ -152,10 +152,11 @@ flicker-noise exponent. It also tells you how often a molecule actually
 bridged the gap (the junction yield) and whether the conductance drifted
 during the run. For I-V sweeps it fits the single-level model and finds
 the transition voltage. For conductance-time traces it finds flickering
-and mechanical switching events, and a separate tab does the ensemble
-statistics of large-area (EGaIn) junctions. Piezo modulation is covered
-too, and there is a simulator that makes fake data with known answers,
-which I use to check settings.
+and mechanical switching events, a separate tab does the ensemble
+statistics of large-area (EGaIn) junctions, and another one the
+thermopower (Seebeck coefficient) from thermovoltage measurements. Piezo
+modulation is covered too, and there is a simulator that makes fake data
+with known answers, which I use to check settings.
 
 \hypertarget{the-tabs}{%
 \subsection{1.1 The tabs}\label{the-tabs}}
@@ -195,6 +196,8 @@ Piezo modulation & Decay constant $\beta$ from a modulated piezo \\
 EGaIn (ensemble) & Large-area junctions: log\textbar J\textbar{}
 statistics, yield, rectification, $V_\mathrm{trans}$, $\beta$ from a
 length series \\
+Thermopower & Thermovoltage histograms per temperature difference,
+Seebeck coefficient, S against conductance \\
 Simulation & Synthetic recordings \\
 \end{longtable}
 
@@ -1538,8 +1541,9 @@ $10^{-3}$ $G_0$ is found as a flicker, a jump from $10^{-6}$ to 1.6 x
 $10^{-3}$ $G_0$ as a mechanical event, and a flat trace with 3 \% noise
 gives nothing.
 
-\hypertarget{i-v-and-egain-tabs}{%
-\section{10. I-V and EGaIn tabs}\label{i-v-and-egain-tabs}}
+\hypertarget{i-v-egain-and-thermopower-tabs}{%
+\section{10. I-V, EGaIn and Thermopower
+tabs}\label{i-v-egain-and-thermopower-tabs}}
 
 This tab is for bias sweeps. It cuts a recording into forward and
 backward I-V curves, makes histograms of them and, if you want, fits a
@@ -1838,12 +1842,19 @@ independent measurements, not 400. The tab follows the statistics of
 Reus et al.~(2012), as implemented in GaussFit (Chiechi group) and in
 the EGaIn module of XMe (Hong group).
 
-\textbf{Loading.} Every file is one junction: a column with the bias and
-one with the current (or J). Add files \ldots{} or Add folder \ldots{}
-makes a \emph{data set}, normally one molecule or one sample. Enter a
-molecular length for each data set in the table (nm, angstrom or number
-of carbons, as long as all sets use the same unit) if you want $\beta$.
-Add simulated makes fake data sets with known answers.
+\textbf{Loading.} With \emph{file layout} =
+\texttt{one junction per file}, every file is one junction: a column
+with the bias and one with the current (or J). With
+\texttt{column pairs V, I, V, I, ...} one file holds many junctions:
+columns 0 and 1 are the bias and current of the first junction, 2 and 3
+of the second, and so on. The pairs may have different lengths (shorter
+ones end in empty cells), a header line is fine, and the junctions are
+named after the file with \_1, \_2, \ldots{} appended. Add files
+\ldots{} or Add folder \ldots{} makes a \emph{data set}, normally one
+molecule or one sample. Enter a molecular length for each data set in
+the table (nm, angstrom or number of carbons, as long as all sets use
+the same unit) if you want $\beta$. Add simulated makes fake data sets
+with known answers.
 
 \textbf{What it does:}
 
@@ -1898,9 +1909,9 @@ The confidence interval (step 5) and the length dependence (step 9) are
 \]
 
 \begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3667}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4049}}
-  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1984}}@{}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3219}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4176}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2304}}@{}}
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
 Setting
@@ -1913,8 +1924,10 @@ Default
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-bias column, current column & Column number (0 = first) or header name &
-0, 1 \\
+file layout & \texttt{one junction per file} or
+\texttt{column pairs V, I, V, I, ...} & one junction per file \\
+bias column, current column & Column number (0 = first) or header name
+(one junction per file only) & 0, 1 \\
 current unit & A, mA, uA, nA, or A/cm2 if the column is already J & A \\
 contact diameter (um), contact area (cm2) & Geometric contact; the area
 overrides the diameter & 25 um, empty \\
@@ -1950,6 +1963,138 @@ of sweeps, the yield, the contact area and how it was measured, and the
 confidence interval with $\alpha$. The geometric contact area is not the
 electrical one (Simeone et al.~2013 estimate $10^{-4}$ of it), so $J_0$
 is only comparable between data sets measured the same way.
+
+\hypertarget{thermopower-tab}{%
+\subsection{10.6 Thermopower tab}\label{thermopower-tab}}
+
+A temperature difference across a molecular junction drives a
+thermoelectric voltage. Its sign and size give the Seebeck coefficient
+S, which tells whether the HOMO or the LUMO is closer to the Fermi
+level: S \textgreater{} 0 means hole transport through the HOMO, S
+\textless{} 0 electron transport through the LUMO. The tab does the
+standard analysis of Reddy et al.~(2007) and Widawsky et al.~(2012): you
+give the thermovoltage and the temperature, and it makes the histograms
+and the fit.
+
+\textbf{Input.} Text or Igor files with the thermoelectric voltage in
+one column and the temperature in another, one row per sample. A file is
+usually one trace (one junction), but a file can also hold traces at
+several temperatures, because the temperature is read per sample. The
+temperature column is either:
+
+\begin{itemize}
+\tightlist
+\item
+  the temperature difference dT itself,
+\item
+  the temperature of the heated electrode, with dT = T - \emph{T
+  reference} (the cold side, e.g.~room temperature), or
+\item
+  missing: then each data set gets one dT that you type in when you load
+  it.
+\end{itemize}
+
+An optional conductance column (G/$G_0$ or log G/$G_0$) lets you keep
+only the samples on the molecular plateau (\emph{keep log G from / to})
+and plots S against log G.
+
+\textbf{What it does:}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  V is converted to microvolt and divided by the \emph{amplifier gain}.
+  \emph{invert voltage sign} flips it if your wiring measures the
+  opposite polarity.
+\item
+  The samples are grouped by dT in steps of \emph{dT step}. With
+  \emph{histogram of} = \texttt{file means}, each file contributes one
+  mean voltage per dT, i.e.~one value per junction as in Reddy et
+  al.~With \texttt{samples}, every sample counts.
+\item
+  At every dT the thermovoltage is histogrammed and fitted with a
+  Gaussian: its centre is the most probable thermovoltage V(dT).
+\item
+  V(dT) is fitted with a straight line, weighted by the error of each
+  centre. The Seebeck coefficient follows from the slope:
+\end{enumerate}
+
+\[
+S = -\frac{dV}{d(\Delta T)} + S_\mathrm{electrode}
+\]
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{4}
+\tightlist
+\item
+  For every sample (or file) with dT not 0, S\_i = -V\_i/dT\_i +
+  S\_electrode is histogrammed and fitted too, and plotted against log G
+  if a conductance column was given.
+\end{enumerate}
+
+The error of each peak comes from resampling the files (bootstrap,
+\emph{bootstrap} resamplings). The samples of one trace aren't
+independent, and a Gaussian fitted to a histogram scatters more than the
+plain standard error suggests. On simulated data (30 repeats, 20
+junctions per dT, S = -6 uV/K) the mean S was -6.05 and 80 \% of the
+results were within their error. So the error is honest, if slightly
+conservative.
+
+\emph{S of the electrodes} is added to -dV/d(dT). With 0 (the default) S
+is relative to the electrode leads. Reddy et al.~add the Seebeck
+coefficient of gold; enter the value for your electrode metal and
+temperature if you want the absolute junction value.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3890}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4292}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1518}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+voltage column, voltage unit & Column of the thermovoltage and its unit
+(V, mV, uV, nV) & 0, uV \\
+amplifier gain & V is divided by this & 1 \\
+invert voltage sign & Flips the sign of V & off \\
+temperature column, temperature column is & Column of the temperature
+and what it holds (see above) & 1, dT \\
+T reference & Cold-side temperature for the hot-side mode & 295 \\
+conductance column, unit, keep log G from / to & Optional conductance
+filter & empty \\
+histogram of & \texttt{samples} or \texttt{file means} & samples \\
+dT step & dT values are grouped to multiples of this & 1 K \\
+min. samples / files per dT & Fewer than this at a dT: that dT is left
+out & 20 \\
+voltage bins, Seebeck bins & Histogram resolution & 80, 80 \\
+S of the electrodes & Added to -dV/d(dT) & 0 uV/K \\
+bootstrap & Resamplings for the peak errors & 100 \\
+\end{longtable}
+
+\textbf{Plots:} the thermovoltage histograms of all dT with their
+Gaussians, the most probable V against dT with standard errors (black),
+the widths (grey) and the fitted line with S, the S histogram, and the
+2D histogram of S against log G.
+
+\textbf{Checks.} On simulated traces with S = 12 and -8 uV/K, the tab
+gives 11.9 +/- 0.4 and -8.1 +/- 0.4. Through real files (V in mV, the
+hot-side temperature, G in $G_0$, a conductance window) S = -6 comes
+back as -5.9 +/- 0.5.
+
+\textbf{What to report:} S with its error, the dT values and the number
+of junctions at each, whether samples or file means were used, the
+conductance window, and whether an electrode Seebeck coefficient was
+added.
 
 \hypertarget{piezo-modulation-tab}{%
 \section{11. Piezo modulation tab}\label{piezo-modulation-tab}}
@@ -2187,6 +2332,13 @@ $\sigma_\mathrm{log}$, CI, sweeps & EGaIn \\
 $V_\mathrm{trans}$ per cycle, summary & EGaIn \\
 \texttt{\textless{}name\textgreater{}\_\allowbreak{}EGaIn\_\allowbreak{}beta.txt}
 & $\beta$, $J_0$ and the points of the fit & EGaIn, after Fit $\beta$ \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Thermo\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}peaks.txt}
+& Per dT: most probable V, $\sigma$, error, count & Thermopower \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Thermo\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}seebeck\_\allowbreak{}values.txt}
+& S of every sample or file (and log G) & Thermopower \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Thermo\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}voltage\_\allowbreak{}histograms.txt},
+\texttt{...\_\allowbreak{}summary.txt} & Voltage histogram per dT; S,
+slope, settings & Thermopower \\
 \texttt{\textless{}name\textgreater{}\_\allowbreak{}junctions.txt} & Per
 trace: junction yes/no, flat plateau length, plateau log G & Junction
 statistics \\
@@ -2318,6 +2470,11 @@ histograms & I-V \\
 \texttt{...\_\allowbreak{}SLM\_\allowbreak{}fit},
 \texttt{...\_\allowbreak{}beta} & Ensemble junctions, one set per data
 set & EGaIn \\
+\texttt{Thermo\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}thermo\_\allowbreak{}voltage\_\allowbreak{}histograms},
+\texttt{...\_\allowbreak{}thermo\_\allowbreak{}voltage\_\allowbreak{}vs\_\allowbreak{}dT},
+\texttt{...\_\allowbreak{}thermo\_\allowbreak{}seebeck\_\allowbreak{}histogram},
+\texttt{...\_\allowbreak{}thermo\_\allowbreak{}seebeck\_\allowbreak{}vs\_\allowbreak{}logG}
+& Thermopower, one set per data set & Thermopower \\
 \texttt{IV\_\allowbreak{}SLM\_\allowbreak{}fit},
 \texttt{IV\_\allowbreak{}Fowler\_\allowbreak{}Nordheim},
 \texttt{IV\_\allowbreak{}transition\_\allowbreak{}voltage\_\allowbreak{}histogram},
@@ -2437,6 +2594,15 @@ or the low-pass strength; check \emph{valid from / to log G} so the
 noise floor is excluded. \\
 EGaIn: every junction is a short & \emph{current unit} or \emph{contact
 diameter} is wrong (J too large), or the short threshold is too low. \\
+EGaIn column pairs: fewer junctions than pairs & Pairs with fewer than 4
+valid points are skipped; a lone last column without a partner is
+ignored. \\
+Thermopower: ``fewer than \ldots{} at every dT'' & Lower \emph{min.
+samples / files per dT}, or check \emph{dT step} and the temperature
+column mode (dT vs hot-side temperature). \\
+Thermopower: S has the wrong sign for a known molecule & Tick
+\emph{invert voltage sign}; the sign of the measured voltage depends on
+which electrode is grounded. \\
 EGaIn: no rectification or $V_\mathrm{trans}$ & The sweeps don't cover
 both polarities in one cycle, or the bias doesn't go far enough for a
 $V_\mathrm{trans}$. \\
@@ -2477,10 +2643,10 @@ program folder and run \texttt{GZero.exe --selftest report.txt} (or
 trace detection, histogram fit, dwell time, clustering, noise analysis,
 junction yield, event detection, I-V detection, the single-level fit
 (also at 300 K on the energy grid with Levenberg-Marquardt) and TVS, the
-EGaIn statistics with $\beta$ on simulated junctions, and the figure
-export without opening a window and writes the results to
-\texttt{report.txt}. If everything is fine the last line is
-\texttt{SELFTEST OK}.
+EGaIn statistics with $\beta$ on simulated junctions and a column-pair
+file, the thermopower fit, and the figure export without opening a
+window and writes the results to \texttt{report.txt}. If everything is
+fine the last line is \texttt{SELFTEST OK}.
 
 \hypertarget{references}{%
 \section{15. References}\label{references}}
@@ -2767,9 +2933,21 @@ junctions}\label{junction-statistics-i-v-models-events-and-ensemble-junctions}}
   confidence intervals, rectification, $V_\mathrm{trans}$ per trace). No
   code was copied, because GPL code can't go into an Apache-licensed
   program.
+\item
+  P. Reddy, S.-Y. Jang, R. A. Segalman, A. Majumdar, ``Thermoelectricity
+  in molecular junctions'', \emph{Science} 315, 1568-1571 (2007).
+  \href{https://doi.org/10.1126/science.1137149}{doi:10.1126/science.1137149}
+  Thermovoltage histograms per dT and S from the slope.
+\item
+  J. R. Widawsky, P. Darancet, J. B. Neaton, L. Venkataraman,
+  ``Simultaneous determination of conductance and thermopower of single
+  molecule junctions'', \emph{Nano Letters} 12, 354-358 (2012).
+  \href{https://doi.org/10.1021/nl203634m}{doi:10.1021/nl203634m}
+  Conductance and thermopower in the same STM break-junction
+  measurement; sign of S for HOMO- and LUMO-conducting junctions.
 \end{enumerate}
 
-I took the details of 26-35 from the publishers' and university
+I took the details of 26-37 from the publishers' and university
 repositories' pages and the code repositories in October 2026. They
 haven't been re-checked against Crossref like 1-24.
 
@@ -2805,6 +2983,8 @@ preset, events, dwell time & 30 (31 for the integration) \\
 EGaIn statistics, yield, rectification & 32; 34, 35 for the software you
 compare with \\
 $\beta$ and $J_0$ from a length series & 33 \\
+Thermopower, Seebeck coefficient & 36, 37; 34 for the XMe thermopower
+module \\
 PSD (Welch), smoothing & 22, 23 \\
 Libraries used & 24, 25 \\
 \end{longtable}

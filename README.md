@@ -5,7 +5,7 @@ G0 = 2e²/h) analyses single-molecule break-junction data (MCBJ and STM-BJ): raw
 (.cvr/.txt/.csv) or Igor (.pxp/.ibw) files to conductance, trace detection, histograms, plateau
 length, junction yield, dwell time, 2D correlation, clustering, flicker noise, flickering and mechanical
 events, I-V (single-level model fits at finite temperature, transition voltage spectroscopy), piezo
-modulation, and ensemble statistics of large-area (EGaIn) junctions.
+modulation, ensemble statistics of large-area (EGaIn) junctions and thermopower (Seebeck coefficient).
 
 The manual is `docs/User_Manual.pdf` (Help -> User manual in the program).
 
@@ -93,7 +93,8 @@ Modules:
 | `iv`, `modulation`, `simulation` | I-V sweeps, lock-in beta, fake data |
 | `ivmodels` | single-level (Lorentzian) model at 0 K or finite temperature (closed digamma form, or the energy-grid Landauer integral of Rashid et al. 2025), Levenberg-Marquardt or bounded fits, most probable I-V curve, transition voltage spectroscopy |
 | `events` | flickering and mechanical events in G(t) (Butterworth + Savitzky-Golay + derivative peaks), conductance-time histograms of holds |
-| `egain` | large-area / EGaIn junctions: J from the contact area, shorts and yield, Gaussian log\|J\| per bias with junction-based confidence intervals, rectification, V_trans, beta and J0 from a length series |
+| `thermo` | thermopower: thermovoltage histograms per temperature difference, Seebeck coefficient from the slope with bootstrap errors, S histogram and S against log G |
+| `egain` | large-area / EGaIn junctions (one junction per file or V, I column pairs): J from the contact area, shorts and yield, Gaussian log\|J\| per bias with junction-based confidence intervals, rectification, V_trans, beta and J0 from a length series |
 | `figures`, `style`, `export` | plots, figure style, result files |
 
 ## Checks I did
@@ -109,6 +110,8 @@ Modules:
 - Junction yield on simulated data: 68.5 +/- 3.3 % (true 70 %) and 29.0 +/- 3.2 % (true 30 %).
 - Finite temperature: closed form and energy-grid integral agree to 1e-9. With the Rashid et al. 2025 settings
   (300 K, grid, Levenberg-Marquardt) a model curve with eps0 = 1.10 eV, Gamma = 11.3 meV comes back exactly.
+- Thermopower: S = 11.9 +/- 0.4 (true 12) and -8.1 +/- 0.4 (true -8) uV/K on simulated traces; over 30 repeats
+  80 % of the results fall within their error.
 - Dwell time from the peak area: 135-146 ms (expected 140 ms on simulated data).
 - Rashid et al. 2025 noise preset: n = 1.53 averaged over five simulated sets (true 1.5).
 - EGaIn: beta = 0.904 +/- 0.016 (true 0.9), log R = 0.30 (true 0.3); over 20 repeats 65 % of the beta values
