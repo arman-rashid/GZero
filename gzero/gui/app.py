@@ -261,7 +261,8 @@ class MainWindow(QMainWindow):
             except Exception as exc:  # noqa: BLE001
                 errors.append(f"Origin: {exc}")
         config = {
-            "recordings": [{"name": r.name, "source": r.meta.get("source"), "fs": r.fs, "samples": r.n}
+            "recordings": [{"name": r.name, "source": r.meta.get("source"), "fs": r.meta.get("fs_full", r.fs),
+                            "samples": r.meta.get("n_full", r.n), "read_in_pieces": bool(r.meta.get("streamed"))}
                            for r in self.project.recordings],
             "trace_summary": self.project.summary_text(),
             "settings": self.all_settings(),

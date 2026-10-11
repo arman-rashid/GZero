@@ -574,12 +574,21 @@ def columns_to_recording(arr: np.ndarray, cs: ColumnSettings, name: str = "data"
 
 
 def load_recordings(path: str, column_settings: ColumnSettings | None = None,
-                    conversion_settings: ConversionSettings | None = None) -> list[Recording]:
-    """Load any supported file; text and Igor files can give several recordings."""
+                    conversion_settings: ConversionSettings | None = None,
+                    stream_settings=None) -> list[Recording]:
+    """Load any supported file; text and Igor files can give several recordings.
+
+    With stream_settings (streaming.StreamSettings), TDMS files above its size threshold are
+    read in pieces: the Recording then holds only an overview and the traces are cut from the
+    file chunk by chunk (see streaming.py)."""
     from . import bj_io
 
     ext = os.path.splitext(path)[1].lower()
     name = os.path.splitext(os.path.basename(path))[0]
+    if ext == ".tdms" and stream_settings is not None:
+        from . import streaming
+        if streaming.should_stream(path, stream_settings):
+            return [streaming.load_streamed(path, conversion_settings or ConversionSettings(), stream_settings)]
     if ext == ".tdms":
         recs = [tdms_to_recording(bj_io.read_tdms(path), conversion_settings or ConversionSettings())]
     else:

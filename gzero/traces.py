@@ -255,7 +255,8 @@ def extract_traces(rec: Recording, ss: SegmentSettings, start_index: int = 0) ->
     else:
         segs = threshold_segments(logG, ss, rec.fs)
 
-    holds = [Trace(i, "hold", rec.name, a, b, np.zeros(b - a), logG[a:b].copy(), rec.fs)
+    # holds have no distance axis: a read-only view of one zero instead of an array as long as the hold
+    holds = [Trace(i, "hold", rec.name, a, b, np.broadcast_to(np.float64(0.0), (b - a,)), logG[a:b].copy(), rec.fs)
              for i, (a, b, d) in enumerate((s for s in segs if s[2] == 0 and s[1] - s[0] >= 10))]
     groups = _join_holds(segs) if ss.join_holds else [([(a, b)], d) for a, b, d in segs]
     piezo_smooth = None

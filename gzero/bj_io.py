@@ -79,9 +79,12 @@ class TdmsData:
     calibration: dict = field(default_factory=dict)  # module -> {item: [floats] or str}
     events: list = field(default_factory=list)       # [(t_seconds_from_first, label)]
     file_props: dict = field(default_factory=dict)
+    n: int | None = None                             # samples (set when the channels are read lazily)
 
     @property
     def n_samples(self) -> int:
+        if self.n is not None:
+            return self.n
         return len(next(iter(self.channels.values()))) if self.channels else 0
 
     def modules(self) -> list[int]:
@@ -121,36 +124,99 @@ def _parse_number_list(text: str):
     return out
 
 
-def read_tdms(path: str) -> TdmsData:
-    """Read an EC4 BJ TDMS file (needs the npTDMS package)."""
-    try:
-        from nptdms import TdmsFile
-    except ImportError as exc:  # pragma: no cover - environment dependent
-        raise ImportError("Reading .tdms needs npTDMS:  pip install npTDMS") from exc
+class LazyChannels(dict):
+    """Channel name -> samples [start:stop], read from the file only when a channel is used."""
 
-    f = TdmsFile.read(path)
-    groups = {g.name: g for g in f.groups()}
-    raw = groups.get("BJRawData")
-    if raw is None:
-        # fall back to the first group that holds numeric waveforms
-        for g in f.groups():
-            if any(c.data.dtype.kind == "f" for c in g.channels()):
-                raw = g
-                break
-    if raw is None:
-        raise ValueError(f"No raw data group found in {path}")
+    def __init__(self, group, names, start, stop):
+        super().__init__({n: None for n in names})
+        self._group, self._start, self._stop = group, start, stop
 
-    channels, props, fs = {}, {}, None
-    for c in raw.channels():
-        data = c[:]
-        if data.dtype.kind not in "fiu":
-            continue
-        channels[c.name] = np.asarray(data, dtype=np.float64)
-        props[c.name] = dict(c.properties)
-        inc = c.properties.get("wf_increment")
-        if fs is None and inc:
-            fs = 1.0 / float(inc)
+    def __getitem__(self, name):
+        v = dict.__getitem__(self, name)
+        if v is None:
+            v = np.asarray(self._group[name][self._start:self._stop], dtype=np.float64)
+            dict.__setitem__(self, name, v)
+        return v
 
+    def get(self, name, default=None):
+        return self[name] if name in self else default
+
+    def values(self):
+        return [self[k] for k in self]
+
+    def items(self):
+        return [(k, self[k]) for k in self]
+
+
+class TdmsReader:
+    """An EC4 BJ TDMS file opened for reading in pieces (needs npTDMS).
+
+    Only the header and the small groups (Setup, Calibration, Events) are read
+    when the file is opened; the raw channels are read slice by slice with
+    :meth:`data`, so files much larger than the memory can be processed.
+
+        with TdmsReader(path) as r:
+            for start in range(0, r.n, 1_000_000):
+                td = r.data(start, start + 1_000_000)     # a TdmsData of that range
+    """
+
+    def __init__(self, path: str):
+        try:
+            from nptdms import TdmsFile
+        except ImportError as exc:  # pragma: no cover - environment dependent
+            raise ImportError("Reading .tdms needs npTDMS:  pip install npTDMS") from exc
+        self.path = path
+        self._file = TdmsFile.open(path)
+        f = self._file
+        groups = {g.name: g for g in f.groups()}
+        raw = groups.get("BJRawData")
+        if raw is None:
+            # fall back to the first group that holds numeric waveforms
+            for g in f.groups():
+                if any(np.dtype(c.dtype).kind == "f" for c in g.channels()):
+                    raw = g
+                    break
+        if raw is None:
+            self._file.close()
+            raise ValueError(f"No raw data group found in {path}")
+        self._raw = raw
+        self.names, self.props, fs, lengths = [], {}, None, []
+        for c in raw.channels():
+            try:
+                kind = np.dtype(c.dtype).kind
+            except TypeError:
+                continue
+            if kind not in "fiu":
+                continue
+            self.names.append(c.name)
+            self.props[c.name] = dict(c.properties)
+            lengths.append(len(c))
+            inc = c.properties.get("wf_increment")
+            if fs is None and inc:
+                fs = 1.0 / float(inc)
+        self.n = int(min(lengths)) if lengths else 0
+        self.fs = float(fs) if fs else 10000.0
+        self.setup, self.calibration, self.events = _small_groups(groups)
+        self.file_props = dict(f.properties)
+
+    def data(self, start: int = 0, stop: int | None = None) -> TdmsData:
+        stop = self.n if stop is None else min(int(stop), self.n)
+        start = max(0, int(start))
+        return TdmsData(path=self.path, channels=LazyChannels(self._raw, self.names, start, stop),
+                        channel_props=self.props, fs=self.fs, setup=self.setup, calibration=self.calibration,
+                        events=self.events, file_props=self.file_props, n=stop - start)
+
+    def close(self):
+        self._file.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+
+def _small_groups(groups):
     setup = {}
     if "Setup" in groups:
         cols = [c[:] for c in groups["Setup"].channels()]
@@ -179,17 +245,22 @@ def read_tdms(path: str) -> TdmsData:
             t0 = times[0]
             for t, lab in zip(times, labels):
                 events.append(((t - t0) / np.timedelta64(1, "s"), str(lab)))
+    return setup, calibration, events
 
-    return TdmsData(
-        path=path,
-        channels=channels,
-        channel_props=props,
-        fs=float(fs) if fs else 10000.0,
-        setup=setup,
-        calibration=calibration,
-        events=events,
-        file_props=dict(f.properties),
-    )
+
+def tdms_info(path: str) -> TdmsData:
+    """Header of a TDMS file without its samples (channels are read lazily if touched)."""
+    r = TdmsReader(path)
+    return r.data(0, r.n)
+
+
+def read_tdms(path: str) -> TdmsData:
+    """Read an EC4 BJ TDMS file completely (needs the npTDMS package)."""
+    with TdmsReader(path) as r:
+        td = r.data(0, r.n)
+        td.channels = {k: v for k, v in td.channels.items()}   # read every channel now
+        td.n = None
+    return td
 
 
 def _sniff_delimiter(path: str):

@@ -239,8 +239,10 @@ class ConvertTab(AnalysisTab):
         return [self.files.item(i).data(Qt.UserRole) for i in range(self.files.count())]
 
     def _tdms(self, path):
+        """Header of a TDMS file (no samples are read)."""
         if path not in self._tdms_cache:
-            self._tdms_cache = {path: bj_io.read_tdms(path)}   # keep only one in memory
+            with bj_io.TdmsReader(path) as r:
+                self._tdms_cache = {path: r.data(0, r.n)}   # channels stay unread
         return self._tdms_cache[path]
 
     def _show_info(self, row):
@@ -275,9 +277,6 @@ class ConvertTab(AnalysisTab):
             self.form.widgets["module"].setValue(mods[0])
 
     # actions
-    def _convert(self, path, cs):
-        return cv.tdms_to_recording(bj_io.read_tdms(path), cs)
-
     def preview(self):
         row = self.files.currentRow()
         if row < 0:
@@ -287,9 +286,16 @@ class ConvertTab(AnalysisTab):
         if cs is None:
             return
         path = self.files.item(row).data(Qt.UserRole)
-        td = self._tdms(path)
-        self.background(lambda: (td, cv.tdms_to_recording(td, cs)), on_done=self._plot_preview,
-                        busy="Converting ...")
+
+        def job():
+            # only the first PREVIEW_S seconds: enough to check the settings, fast for any file size
+            with bj_io.TdmsReader(path) as r:
+                td = r.data(0, int(PREVIEW_S * r.fs))
+                rec = cv.tdms_to_recording(td, cs)
+                td.channels = dict(td.channels.items())   # read the rest while the file is open
+            return td, rec
+
+        self.background(job, on_done=self._plot_preview, busy="Converting ...")
 
     def _plot_preview(self, res):
         td, rec = res
@@ -340,18 +346,7 @@ class ConvertTab(AnalysisTab):
         def job():
             written = []
             for p in paths:
-                rec = self._convert(p, cs)
-                base = os.path.join(out, rec.name)
-                bj_io.write_cvr(base + ".cvr", cv.back_calculated_current(rec),
-                                rec.piezo if rec.piezo is not None else np.zeros(rec.n))
-                written.append(base + ".cvr")
-                if csv:
-                    import pandas as pd
-                    pd.DataFrame({"t_s": rec.time, "G_G0": rec.G, "logG": rec.logG(),
-                                  "piezo_nm": rec.piezo if rec.piezo is not None else np.nan,
-                                  "bias_V": rec.bias_array(), "current_A": rec.current}
-                                 ).to_csv(base + ".csv", index=False, float_format="%.6g")
-                    written.append(base + ".csv")
+                written += convert_tdms_files(p, cs, out, csv)
             return written
 
         self.background(job, on_done=lambda w: self.status(f"Wrote {len(w)} files to {out}"),
@@ -367,8 +362,13 @@ class ConvertTab(AnalysisTab):
             return
         self.project.conversion_settings = cs
 
+        st = self.main.tab("Data & Traces").form_value("streaming")
+        if st is None:
+            return
+        self.project.stream_settings = st
+
         def job():
-            return [self._convert(p, cs) for p in paths]
+            return [r for p in paths for r in cv.load_recordings(p, None, cs, st)]
 
         def done(recs):
             self.project.add_recordings(recs)
@@ -376,6 +376,41 @@ class ConvertTab(AnalysisTab):
             self.status(f"Loaded {len(recs)} recordings. Detect the traces in the Data & Traces tab.")
 
         self.background(job, on_done=done, busy="Converting ...")
+
+
+PREVIEW_S = 120.0       # the Convert tab previews this much of a file
+
+
+def convert_tdms_files(path, cs, out, csv=False, chunk_s=120.0, pad=2000):
+    """TDMS -> .cvr (and .csv) written piece by piece, so the file size doesn't matter.
+    Each piece is converted with pad samples on both sides, which are dropped again, so
+    the filters see the same neighbours as in a conversion of the whole file."""
+    import pandas as pd
+    name = os.path.splitext(os.path.basename(path))[0]
+    base = os.path.join(out, name)
+    with bj_io.TdmsReader(path) as r, open(base + ".cvr", "w", newline="") as fc:
+        fv = open(base + ".csv", "w", newline="") if csv else None
+        try:
+            step = max(1, int(chunk_s * r.fs))
+            for a in range(0, r.n, step):
+                b = min(r.n, a + step)
+                ra, rb = max(0, a - pad), min(r.n, b + pad)
+                rec = cv.tdms_to_recording(r.data(ra, rb), cs)
+                sl = slice(a - ra, a - ra + (b - a))
+                ibc = cv.back_calculated_current(rec)[sl]
+                z = rec.piezo[sl] if rec.piezo is not None else np.zeros(b - a)
+                pd.DataFrame({"i": ibc, "z": z}).to_csv(fc, sep="\t", header=False, index=False,
+                                                        float_format="%.5E", lineterminator="\r\n")
+                if fv is not None:
+                    pd.DataFrame({"t_s": (np.arange(a, b)) / r.fs, "G_G0": rec.G[sl], "logG": rec.logG()[sl],
+                                  "piezo_nm": z if rec.piezo is not None else np.nan,
+                                  "bias_V": rec.bias_array()[sl],
+                                  "current_A": rec.current[sl] if rec.current is not None else np.nan}
+                                 ).to_csv(fv, index=False, header=(a == 0), float_format="%.6g")
+        finally:
+            if fv is not None:
+                fv.close()
+    return [base + ".cvr"] + ([base + ".csv"] if csv else [])
 
 
 # Data & Traces tab (loading, cutting, trace browser)
@@ -392,7 +427,16 @@ class DataTab(AnalysisTab):
                                      COLUMN_LABELS, COLUMN_CHOICES, COLUMN_TIPS)
         self.seg_form = SettingsForm("Trace detection and cutting", project.segment_settings,
                                      SEGMENT_LABELS, SEGMENT_CHOICES, SEGMENT_TIPS)
-        self.forms.update({"columns": self.col_form, "segmentation": self.seg_form})
+        self.stream_form = SettingsForm(
+            "Large TDMS files", project.stream_settings,
+            {"threshold_mb": "read in pieces above (MB)", "chunk_s": "piece length (s)",
+             "margin_s": "margin (s)", "overview_points": "overview points"},
+            tips={"threshold_mb": "Bigger TDMS files are not loaded at once: they are converted and cut into traces "
+                                  "piece by piece, and only the traces, holds and an overview stay in memory.",
+                  "margin_s": "Each piece is read with this margin before and after it, so traces crossing a piece "
+                              "border are found complete. Must be longer than one trace (pull + hold + pull).",
+                  "chunk_s": "Memory per piece is roughly 100 MB per minute of 10 kHz data."})
+        self.forms.update({"columns": self.col_form, "segmentation": self.seg_form, "streaming": self.stream_form})
         link_amplifier(self.col_form, ("current_b_column", "current_scale_b", "b_saturation", "switch_logG"))
         self.summary = QLabel("No data loaded.")
         self.summary.setWordWrap(True)
@@ -410,7 +454,7 @@ class DataTab(AnalysisTab):
         self.seg_button.setStyleSheet("font-weight: bold;")
 
         self.layout_.addWidget(scroll_panel(data_box, self.col_form, self.seg_form,
-                                            self.seg_button, self.summary, width=350))
+                                            self.seg_button, self.summary, self.stream_form, width=350))
 
         # right side: overview + trace browser
         right = QSplitter(Qt.Vertical)
@@ -480,13 +524,17 @@ class DataTab(AnalysisTab):
         conv = self.main.tab("Convert TDMS").form_value("conversion")
         if conv is None:
             return
+        st = self.form_value("streaming")
+        if st is None:
+            return
         self.project.column_settings = cols
+        self.project.stream_settings = st
 
         def job():
             recs, errors = [], []
             for p in paths:
                 try:
-                    recs.extend(cv.load_recordings(p, cols, conv))
+                    recs.extend(cv.load_recordings(p, cols, conv, st))
                 except Exception as exc:  # noqa: BLE001
                     errors.append(f"{os.path.basename(p)}: {exc}")
             return recs, errors
@@ -528,7 +576,8 @@ class DataTab(AnalysisTab):
         self.rec_list.blockSignals(True)
         self.rec_list.clear()
         for r in self.project.recordings:
-            it = QListWidgetItem(f"{r.name}  ({r.n / r.fs:.1f} s, {'piezo' if r.piezo is not None else 'no piezo'})")
+            big = f", {r.meta['file_size_mb'] / 1000:.2f} GB read in pieces" if r.meta.get("streamed") else ""
+            it = QListWidgetItem(f"{r.name}  ({r.n / r.fs:.1f} s, {'piezo' if r.piezo is not None else 'no piezo'}{big})")
             it.setData(Qt.UserRole, r.name)
             tip = str(r.meta.get("source", ""))
             if r.meta.get("from_file"):
@@ -578,13 +627,21 @@ class DataTab(AnalysisTab):
         x, y = decimate_for_plot(t, rec.logG())
         ax.plot(x, y, lw=0.4, color="k")
         colors = {"break": "tab:red", "make": "tab:blue"}
-        for tr_ in self.project.traces:
-            if tr_.rec_name == rec.name:
-                ax.axvspan(tr_.start / rec.fs, tr_.stop / rec.fs, color=colors.get(tr_.kind, "y"),
-                           alpha=0.15 if tr_.selected else 0.05, lw=0)
-        for h in self.project.holds:
-            if h.rec_name == rec.name:
-                ax.axvspan(h.start / rec.fs, h.stop / rec.fs, color="0.5", alpha=0.15, lw=0)
+        fs = rec.meta.get("fs_full", rec.fs)      # trace indices are at the file's sampling rate
+        spans = [(t_.start / fs, t_.stop / fs, colors.get(t_.kind, "y"), 0.15 if t_.selected else 0.05)
+                 for t_ in self.project.traces if t_.rec_name == rec.name]
+        spans += [(h.start / fs, h.stop / fs, "0.5", 0.15) for h in self.project.holds if h.rec_name == rec.name]
+        if len(spans) > 3000:
+            # thousands of axvspans are slow: draw them as one broken bar per colour instead
+            from collections import defaultdict
+            groups = defaultdict(list)
+            for a, b, c, al in spans:
+                groups[(c, al)].append((a, b - a))
+            for (c, al), xr in groups.items():
+                ax.broken_barh(xr, (0, 1), transform=ax.get_xaxis_transform(), color=c, alpha=al, lw=0)
+        else:
+            for a, b, c, al in spans:
+                ax.axvspan(a, b, color=c, alpha=al, lw=0)
         ax.set_xlabel("time (s)")
         ax.set_ylabel("log(G/G$_0$)")
         if rec.piezo is not None:

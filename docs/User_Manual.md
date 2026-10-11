@@ -27,7 +27,7 @@ I wrote GZero to analyse single-molecule break-junction data (MCBJ and STM-BJ) i
 
 ### 1.2 What you need
 
-Windows 10 or 11 (64 bit) for the exe. From Python it should also run on macOS and Linux, though I've only used it on Windows. 8 GB of RAM is fine for normal files. Big files are loaded completely into memory: my 1 GB test file (73 min at 10 kHz) took about 7 s to load, and I'd plan roughly 3-4 GB of RAM per GB of TDMS. The window needs about 1400 x 900 pixels to be comfortable.
+Windows 10 or 11 (64 bit) for the exe. From Python it should also run on macOS and Linux, though I've only used it on Windows. 8 GB of RAM is fine, also for big files. TDMS files above 300 MB are read in pieces (4.7): a 1.3 GB test file (90 min at 10 kHz) loads in about 4 s and needs well under 1 GB of memory. Text files are still loaded completely, so very large text files need about 3-4 GB of RAM per GB of file. The window needs about 1400 x 900 pixels to be comfortable.
 
 ### 1.3 Installing and starting
 
@@ -92,8 +92,8 @@ The current can come from a single-stage amplifier (one current, Ia) or a dual-s
 
 1. Add files or Add folder. When you click a file, the panel shows its sampling rate, length, modules, channel gains, series resistor and whether diode calibration data is in it.
 2. Change the conversion settings if needed (3.3). Empty fields mean "take it from the file".
-3. Preview selected shows the raw current channels, log(G/G0) with the event marks (green = approach, red = retract, grey = hold) and the piezo.
-4. Then either Convert all -> .cvr, which writes one `.cvr` per TDMS file (tick Also write .csv files if you also want a table with time, G, log G, piezo, bias and current), or Load all into analysis, which converts in memory and jumps to Data & Traces.
+3. Preview selected shows the first 2 minutes of the file: the raw current channels, log(G/G0) with the event marks (green = approach, red = retract, grey = hold) and the piezo. Selecting a file only reads its header, so this is quick for files of any size.
+4. Then either Convert all -> .cvr, which writes one `.cvr` per TDMS file (tick Also write .csv files if you also want a table with time, G, log G, piezo, bias and current), or Load all into analysis, which converts in memory and jumps to Data & Traces. The `.cvr` and `.csv` files are written 2 minutes at a time, so the file size doesn't matter. Each piece is converted with a few thousand samples of overlap on both sides, so the filters give exactly what a conversion of the whole file gives. Load all into analysis reads big files in pieces too (4.7).
 
 ### 3.3 Conversion settings
 
@@ -235,6 +235,26 @@ Below it, the trace browser shows one trace against distance with its own histog
 | Overlay | Plot N random accepted traces on top of each other |
 
 Manual marks are kept until you detect the traces again.
+
+### 4.7 Large TDMS files
+
+A 1 GB TDMS file holds tens of millions of samples per channel. Converting it in one go needs several GB of memory, because every step of the conversion makes an array as long as the file. TDMS files larger than *read in pieces above* are therefore never loaded at once:
+
+1. **Loading** reads the file one piece (*piece length*, 2 minutes) at a time, converts it with the normal settings and keeps only a min/max overview of log G and the piezo for the plot. The list shows "read in pieces" next to the file.
+2. **Detect / cut traces** reads the file again, piece by piece. Every piece is read with a *margin* (60 s) before and after it, cut into traces with the normal code, and keeps only the traces and holds that start inside the piece itself. That way traces crossing the border between two pieces are found once and complete. Only the traces, the holds and the overview stay in memory, and they are all that the Histograms, Plateau length, Junction statistics, Correlation, Clustering, Flicker noise and Events tabs use.
+3. **Changing the cutting settings** and detecting again reads the file again, so the file has to stay where it is.
+4. **I-V and Piezo modulation** need the full signals. For a file read in pieces they read and convert the part between *from* and *to* (in s) in their Recording box, or the whole file if these are empty.
+
+| Setting | Meaning | Default |
+| --- | --- | --- |
+| read in pieces above (MB) | TDMS files bigger than this are read in pieces | 300 |
+| piece length (s) | Length of one piece; about 100 MB of memory per minute of 10 kHz data | 120 |
+| margin (s) | Read before and after every piece; must be longer than one trace (pull, hold and pull) | 60 |
+| overview points | Points of the overview plot | 400000 |
+
+**Is the result the same?** Yes. On a simulated recording the pieces gave exactly the same traces and holds as the whole file: the same sample ranges, log G, distance axes and accept/reject decisions, even with pieces of only 20 s. The self-test checks this every time. On a 1.29 GB file (54 million samples per channel, 90 minutes at 10 kHz, 1760 traces and 3520 holds), reading in pieces took 2.8 s to load and 11 s to cut the traces, with a peak memory of 0.7 GB. Loading the whole file took 15.6 s and 4.4 GB.
+
+If a trace is longer than the margin, it can be cut off at the end of a piece; the summary under Detect / cut traces then says how many traces that affected. Make the margin longer if you hold the junction for minutes.
 
 ## 5. Histograms tab
 
@@ -537,6 +557,7 @@ The bias is smoothed and its turning points found (peaks and valleys at least *m
 | Setting | Meaning | Default |
 | --- | --- | --- |
 | file | Which recording | first |
+| from / to (s, big files) | For a TDMS file read in pieces (4.7): the part of the file to analyse; empty = all | empty |
 | min sweep amplitude (V) | Smallest bias swing that counts as a sweep | 0.05 |
 | smoothing points, polynomial order | Savitzky-Golay window and order for the current and dI/dV | 11, 2 |
 | curve must reach V below / above | Only keeps curves that cover this range; empty = off | off |
@@ -743,6 +764,7 @@ The modulation frequency is taken as the strongest narrow line in the piezo spec
 | Setting | Meaning | Default |
 | --- | --- | --- |
 | file | Which recording | first |
+| from / to (s, big files) | For a TDMS file read in pieces (4.7): the part of the file to analyse; empty = all | empty |
 | modulation frequency (Hz) | 0 = find it automatically | 0 |
 | periods per window | How long the lock-in averages | 4 |
 | auto search above (Hz) | Lowest frequency the detection looks at | 10 |
@@ -895,6 +917,8 @@ File -> Save settings writes all settings to a JSON file and File -> Load settin
 | Junction yield close to 100 % for a blank measurement | Tunnelling counts as plateau: lower *flat if slope below* or raise *junction if flat length above* (6.4). |
 | Junction yield close to 0 % although there's a clear peak | The plateaus are tilted more than *flat if slope below*, or the window misses them; use Use peak from histogram fit. |
 | Clustering changes from run to run | Keep the *random seed* fixed (it's 0 by default). |
+| A big TDMS file makes the program slow or run out of memory | Lower *read in pieces above* (4.7) so the file is read in pieces. For I-V and modulation, give a *from / to* range instead of the whole file. |
+| "Detect / cut traces" fails for a file read in pieces | The file was moved or renamed after loading; it is read again for every detection. Load it again from its new place. |
 | Window empty or tiny on a 4K screen | Set the Windows display scaling to 150-200 %. |
 | "No column ... available: ..." | The column name or number isn't in the file. The message lists what is there; Show columns (4.1) does too. Numbers start at 0. |
 | Igor file: "No numeric waves found" | The file has only text waves, or igor2 is missing (`py -m pip install igor2`). |

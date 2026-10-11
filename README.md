@@ -81,7 +81,8 @@ Modules:
 
 | Module | |
 |---|---|
-| `bj_io` | reading TDMS / .cvr / text / Igor .pxp and .ibw, writing .cvr |
+| `bj_io` | reading TDMS (also lazily, a slice at a time) / .cvr / text / Igor .pxp and .ibw, writing .cvr |
+| `streaming` | big TDMS files read in pieces: overview, trace cutting chunk by chunk with margins (same traces as the whole file), parts on demand |
 | `conversion` | calibration (linear or diode polynomial), single- or dual-stage amplifier (merging Ia and Ib), series resistor correction, filters; column / channel mapping, so conductance, voltage, piezo, current and time given in a file are used as they are |
 | `traces` | splitting recordings into traces, holds, cutting limits, distance axis |
 | `analysis` | histograms, Gaussian fits, plateau length, correlation map, tunnelling decay |
@@ -110,6 +111,8 @@ Modules:
 - Junction yield on simulated data: 68.5 +/- 3.3 % (true 70 %) and 29.0 +/- 3.2 % (true 30 %).
 - Finite temperature: closed form and energy-grid integral agree to 1e-9. With the Rashid et al. 2025 settings
   (300 K, grid, Levenberg-Marquardt) a model curve with eps0 = 1.10 eV, Gamma = 11.3 meV comes back exactly.
+- Big TDMS files: a 1.29 GB file is read in pieces with 0.7 GB peak memory instead of 4.4 GB, loads in 2.8 s instead
+  of 15.6 s, and gives exactly the same 1760 traces and 3520 holds.
 - Thermopower: S = 11.9 +/- 0.4 (true 12) and -8.1 +/- 0.4 (true -8) uV/K on simulated traces; over 30 repeats
   80 % of the results fall within their error.
 - Dwell time from the peak area: 135-146 ms (expected 140 ms on simulated data).

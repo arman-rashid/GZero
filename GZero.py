@@ -65,6 +65,29 @@ def selftest(report_path):
         np.savetxt(os.path.join(tmp, "pairs.txt"), np.column_stack(cols), delimiter="\t")
         jp = eg.load_junctions(os.path.join(tmp, "pairs.txt"), eg.EGaInSettings(layout=eg.LAYOUTS[1]))
     lines.append(f"EGaIn column pairs: {len(jp)} junctions from one file")
+    # a big file read in pieces must give the same traces as the whole file
+    from nptdms import TdmsWriter, ChannelObject
+    from gzero import streaming as stm, conversion as cv0
+    srec = sim.simulate(sim.SimulationSettings(n_cycles=30, seed=7))
+    with _tf.TemporaryDirectory() as tmp:
+        tp = os.path.join(tmp, "s.tdms")
+        with TdmsWriter(tp) as wr:
+            props = {"wf_increment": 1.0 / srec.fs}
+            for a0 in range(0, srec.n, 200_000):
+                sl = slice(a0, a0 + 200_000)
+                wr.write_segment([ChannelObject("BJRawData", "M_E1", np.full(len(srec.G[sl]), 0.1), properties=props),
+                                  ChannelObject("BJRawData", "M_i1a", srec.G[sl] * G0 * 0.1 / 1e-5,
+                                                properties={**props, "scale_factor": 1e-5}),
+                                  ChannelObject("BJRawData", "U_Piezo", srec.piezo[sl], properties=props)])
+        ccs = cv0.ConversionSettings(amplifier="single stage")
+        full = cv0.load_recordings(tp, None, ccs)[0]
+        tf_, hf_ = tr.extract_traces(full, tr.SegmentSettings())
+        light = stm.load_streamed(tp, ccs, stm.StreamSettings(chunk_s=15, margin_s=8, overview_points=5000))
+        ts_, hs_ = stm.stream_traces(light, tr.SegmentSettings())
+        same = [(x.start, x.stop) for x in tf_] == [(x.start, x.stop) for x in ts_] and len(hf_) == len(hs_)
+    lines.append(f"TDMS read in pieces: {len(ts_)} traces, {len(hs_)} holds, same as the whole file: {same}")
+    if not same:
+        raise AssertionError("reading in pieces changed the traces")
     from gzero import bj_io, conversion as cv
     logG = np.linspace(0.5, -6, 5000)
     Vb = 0.1 + 0.01 * np.sin(np.arange(5000) / 50)

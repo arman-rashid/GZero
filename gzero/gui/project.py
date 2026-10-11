@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from PySide6.QtCore import QObject, Signal
 
-from .. import traces as tr
+from .. import streaming as stm, traces as tr
 from ..conversion import ColumnSettings, ConversionSettings, Recording
 
 
@@ -22,6 +22,7 @@ class Project(QObject):
         self.segment_settings = tr.SegmentSettings()
         self.column_settings = ColumnSettings()
         self.conversion_settings = ConversionSettings()
+        self.stream_settings = stm.StreamSettings()
         self.n_clusters = 0
 
     # data
@@ -48,12 +49,29 @@ class Project(QObject):
     def recording(self, name: str) -> Recording | None:
         return next((r for r in self.recordings if r.name == name), None)
 
+    def full_recording(self, name: str, t_from: float | None = None, t_to: float | None = None) -> Recording | None:
+        """The recording with all its signals. For a streamed (big) TDMS file the part
+        t_from .. t_to (s, None = start / end) is read and converted now."""
+        rec = self.recording(name)
+        if rec is None or not rec.meta.get("streamed"):
+            return rec
+        fs = rec.meta["fs_full"]
+        a = int((t_from or 0.0) * fs)
+        b = int(t_to * fs) if t_to is not None else None
+        part = stm.read_range(rec.meta["source"], ConversionSettings.from_dict(rec.meta["conversion"]), a, b)
+        part.name = rec.name
+        return part
+
     # traces
     def segment(self, ss: tr.SegmentSettings):
         self.segment_settings = ss
         traces, holds = [], []
         for rec in self.recordings:
-            t, h = tr.extract_traces(rec, ss, start_index=len(traces))
+            if rec.meta.get("streamed"):
+                # big TDMS file: read it again chunk by chunk
+                t, h = stm.stream_traces(rec, ss, start_index=len(traces))
+            else:
+                t, h = tr.extract_traces(rec, ss, start_index=len(traces))
             for i, hh in enumerate(h):
                 hh.index = len(holds) + i
             traces += t
@@ -74,4 +92,8 @@ class Project(QObject):
                f"{len(self.holds)} holds")
         if s["rejected_by"]:
             txt += "\nRejected: " +", ".join(f"{k}: {v}" for k, v in s["rejected_by"].items())
+        cut = sum(r.meta.get("traces_cut_by_margin", 0) for r in self.recordings)
+        if cut:
+            txt += (f"\n{cut} traces were longer than the margin of a file read in pieces and may be cut "
+                    "short: make 'margin' longer (Large TDMS files).")
         return txt

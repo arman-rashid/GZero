@@ -53,9 +53,16 @@ NOISE_TIPS = {
 
 
 def _recording_box(tab, combo):
+    from .widgets import FloatEdit
     box = QGroupBox("Recording")
     lay = QFormLayout(box)
     lay.addRow("file", combo)
+    tab.t_from, tab.t_to = FloatEdit(None, optional=True), FloatEdit(None, optional=True)
+    for w, lab in ((tab.t_from, "from (s, big files)"), (tab.t_to, "to (s, big files)")):
+        w.setToolTip("Big TDMS files are read in pieces. Here only this part of the file is read for the "
+                     "analysis (empty = from the start / to the end).")
+        w.setPlaceholderText("start" if w is tab.t_from else "end")
+        lay.addRow(lab, w)
     tab.project.recordings_changed.connect(lambda: _fill_recordings(tab.project, combo))
     _fill_recordings(tab.project, combo)
     return box
@@ -496,11 +503,12 @@ class IVTab(AnalysisTab):
 
     def run(self):
         s = self.form_value("iv")
-        rec = self.project.recording(self.rec.currentText())
-        if s is None or rec is None:
+        name = self.rec.currentText()
+        if s is None or not name:
             return
-        self.background(iv.curves_from_recording, rec, s, on_done=lambda c: self._done(c, s),
-                        busy="Finding I-V sweeps ...")
+        t0, t1 = self.t_from.value(), self.t_to.value()
+        self.background(lambda: iv.curves_from_recording(self.project.full_recording(name, t0, t1), s),
+                        on_done=lambda c: self._done(c, s), busy="Finding I-V sweeps ...")
 
     def _done(self, curves, s):
         self.curves, self.s = curves, s
@@ -620,10 +628,16 @@ class ModulationTab(AnalysisTab):
 
     def run(self):
         ms = self.form_value("modulation")
-        rec = self.project.recording(self.rec.currentText())
-        if ms is None or rec is None:
+        name = self.rec.currentText()
+        if ms is None or not name:
             return
-        self.background(lambda: (rec, md.lockin(rec, ms)), on_done=self._done, busy="Demodulating ...")
+        t0, t1 = self.t_from.value(), self.t_to.value()
+
+        def job():
+            rec = self.project.full_recording(name, t0, t1)
+            return rec, md.lockin(rec, ms)
+
+        self.background(job, on_done=self._done, busy="Demodulating ...")
 
     def _done(self, out):
         rec, r = out
