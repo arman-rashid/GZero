@@ -6,14 +6,14 @@
 
 local title_done = false
 
--- inline code: allow line breaks after _ / . so long file names wrap inside table cells
+-- inline code: allow line breaks after _ and / so long file names wrap inside table cells
 local special = { ["\\"] = "\\textbackslash{}", ["{"] = "\\{", ["}"] = "\\}", ["$"] = "\\$",
   ["&"] = "\\&", ["#"] = "\\#", ["^"] = "\\textasciicircum{}", ["~"] = "\\textasciitilde{}",
   ["%"] = "\\%", ["<"] = "\\textless{}", [">"] = "\\textgreater{}", ["|"] = "\\textbar{}",
-  ["_"] = "\\_\\allowbreak{}", ["/"] = "/\\allowbreak{}", ["."] = ".\\allowbreak{}" }
+  ["_"] = "\\_\\allowbreak{}", ["/"] = "/\\allowbreak{}" }
 
 local function code_to_latex(el)
-  local out = el.text:gsub("[\\{}$&#^~%%<>|_/.]", special)
+  local out = el.text:gsub("[\\{}$&#^~%%<>|_/]", special)
   return pandoc.RawInline("latex", "\\texttt{" .. out .. "}")
 end
 
@@ -61,8 +61,13 @@ function Table(tbl)
         if i <= ncol then
           local text = pandoc.utils.stringify(cell.contents)
           maxlen[i] = math.max(maxlen[i], #text)
-          -- longest piece that cannot be broken (code breaks after _ / .)
-          for tok in text:gmatch("[^%s_/%.]+[_/%.]?") do maxtok[i] = math.max(maxtok[i], #tok) end
+          -- longest piece that cannot be broken: code breaks after _ / . , other text only at spaces
+          pandoc.Blocks(cell.contents):walk({
+            Code = function(c)
+              for tok in c.text:gmatch("[^%s_/]+[_/]?") do maxtok[i] = math.max(maxtok[i], #tok) end
+            end,
+            Str = function(t) maxtok[i] = math.max(maxtok[i], #t.text) end,
+          })
         end
       end
     end

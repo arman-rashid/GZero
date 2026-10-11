@@ -62,7 +62,8 @@ GZero.py      start the program (also: py -m gzero)
 build_exe.py        build the Windows exe with PyInstaller
 requirements.txt
 gzero/     the Python package: analysis modules and gui/
-docs/               user manual: Markdown source, PDF, LaTeX layout (latex/) and build_manual.py
+docs/               user manual and the 1.3/1.4 methods note: Markdown sources, PDFs,
+                    LaTeX layout (latex/) and build_manual.py
                     (pandoc + LaTeX: py docs/build_manual.py)
 ```
 

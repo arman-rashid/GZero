@@ -53,7 +53,7 @@
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 \setcounter{secnumdepth}{-\maxdimen} % remove section numbering
-% Layout of the GZero user manual (used by docs/build_manual.py through pandoc).
+% Layout of the GZero documents (used by docs/build_manual.py through pandoc).
 \usepackage[a4paper,top=25mm,bottom=25mm,left=25mm,right=25mm,headheight=14pt]{geometry}
 \usepackage{lmodern}
 \renewcommand{\familydefault}{\sfdefault}
@@ -72,11 +72,12 @@
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{}
-\fancyhead[L]{\small GZero -- User Manual}
-\fancyhead[R]{\small\nouppercase{\leftmark}}
+\makeatletter\AtBeginDocument{\fancyhead[L]{\small\@title}}\makeatother
+\fancyhead[R]{\small\nouppercase{\rightmark}}
 \fancyfoot[C]{\small\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
-\renewcommand{\sectionmark}[1]{\markboth{#1}{}}
+\renewcommand{\sectionmark}[1]{\markboth{#1}{#1}}
+\renewcommand{\subsectionmark}[1]{}
 \fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\small\thepage}\renewcommand{\headrulewidth}{0pt}}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{5pt plus 1pt}
@@ -100,8 +101,7 @@
 \setlength{\cftbeforesecskip}{3pt}
 \setcounter{tocdepth}{2}
 \usepackage{hyperref}
-\hypersetup{colorlinks=true,linkcolor=gzblue,urlcolor=gzblue,citecolor=gzblue,
-  pdftitle={GZero - User Manual},pdfauthor={arman-rashid}}
+\hypersetup{colorlinks=true,linkcolor=gzblue,urlcolor=gzblue,citecolor=gzblue,pdfauthor={arman-rashid}}
 \urlstyle{same}
 \sloppy
 \ifLuaTeX
@@ -173,8 +173,7 @@ What it's for
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-Convert TDMS & Raw TDMS channels to conductance,
-\texttt{.\allowbreak{}cvr} export \\
+Convert TDMS & Raw TDMS channels to conductance, \texttt{.cvr} export \\
 Data \& Traces & Loading files, finding and cutting traces, looking
 through them, marking bad ones \\
 Histograms & 1D log G histogram, 2D conductance-distance histogram,
@@ -215,14 +214,14 @@ pixels to be comfortable.
 The simplest way is the exe. Copy the whole \texttt{GZero} folder
 somewhere,
 e.g.~\texttt{C:\textbackslash{}Programs\textbackslash{}GZero}, and
-double-click \texttt{GZero.\allowbreak{}exe}. Don't move the exe out of
-the folder, it needs the files next to it. This manual is in
-\texttt{docs\textbackslash{}User\_\allowbreak{}Manual.\allowbreak{}pdf}
-and also opens from Help -\textgreater{} User manual (F1).
+double-click \texttt{GZero.exe}. Don't move the exe out of the folder,
+it needs the files next to it. This manual is in
+\texttt{docs\textbackslash{}User\_\allowbreak{}Manual.pdf} and also
+opens from Help -\textgreater{} User manual (F1).
 
 The source code is on GitHub: https://github.com/arman-rashid/GZero
 (Apache License 2.0). To run it from Python (3.9 or newer), go to the
-project folder (the one with \texttt{GZero.\allowbreak{}py}) and run
+project folder (the one with \texttt{GZero.py}) and run
 
 \begin{verbatim}
 py -m pip install -r requirements.txt
@@ -230,14 +229,12 @@ py GZero.py
 \end{verbatim}
 
 It needs PySide6, numpy, scipy, matplotlib, pandas, scikit-learn, npTDMS
-and igor2 (for Igor \texttt{.\allowbreak{}pxp} /
-\texttt{.\allowbreak{}ibw} files).
+and igor2 (for Igor \texttt{.pxp} / \texttt{.ibw} files).
 
 If you change the code and want a new exe:
 \texttt{py -m pip install pyinstaller}, then
-\texttt{py build\_\allowbreak{}exe.\allowbreak{}py} in the same folder.
-The new version ends up in
-\texttt{dist\textbackslash{}GZero\textbackslash{}}.
+\texttt{py build\_\allowbreak{}exe.py} in the same folder. The new
+version ends up in \texttt{dist\textbackslash{}GZero\textbackslash{}}.
 
 \hypertarget{the-window}{%
 \subsection{1.4 The window}\label{the-window}}
@@ -253,9 +250,8 @@ the window doesn't freeze.
 Settings are only kept while the program is open. File -\textgreater{}
 Save settings writes them to a file and File -\textgreater{} Load
 settings reads them back. You can also load the
-\texttt{*\_\allowbreak{}config.\allowbreak{}json} from an old results
-folder, which is the easiest way to repeat an analysis with exactly the
-same settings.
+\texttt{*\_\allowbreak{}config.json} from an old results folder, which
+is the easiest way to repeat an analysis with exactly the same settings.
 
 \hypertarget{quick-start}{%
 \section{2. Quick start}\label{quick-start}}
@@ -268,12 +264,11 @@ details.
 \def\labelenumi{\arabic{enumi}.}
 \tightlist
 \item
-  Go to Data \& Traces, click Load files and pick a
-  \texttt{.\allowbreak{}tdms}, \texttt{.\allowbreak{}cvr}, text or Igor
-  \texttt{.\allowbreak{}pxp} file (several at once is fine, or use Load
-  folder). For everything except TDMS check the column settings first:
-  which column is what, and the bias if the file has no voltage column
-  (4.2).
+  Go to Data \& Traces, click Load files and pick a \texttt{.tdms},
+  \texttt{.cvr}, text or Igor \texttt{.pxp} file (several at once is
+  fine, or use Load folder). For everything except TDMS check the column
+  settings first: which column is what, and the bias if the file has no
+  voltage column (4.2).
 \item
   The traces are found automatically after the first load. Under the
   button you see how many were found, how many were accepted and why the
@@ -314,10 +309,10 @@ you can see if the analysis finds them (12).
 \section{3. Data formats and the Convert
 tab}\label{data-formats-and-the-convert-tab}}
 
-You only need the Convert tab for raw \texttt{.\allowbreak{}tdms} files.
-It turns them into conductance (G/$G_0$) and either writes
-\texttt{.\allowbreak{}cvr} files or loads the result straight into the
-analysis. All other file types are loaded in Data \& Traces (4).
+You only need the Convert tab for raw \texttt{.tdms} files. It turns
+them into conductance (G/$G_0$) and either writes \texttt{.cvr} files or
+loads the result straight into the analysis. All other file types are
+loaded in Data \& Traces (4).
 
 \hypertarget{file-types}{%
 \subsection{3.1 File types}\label{file-types}}
@@ -338,28 +333,26 @@ Where to load it
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-\texttt{.\allowbreak{}tdms}, raw & Group \texttt{BJRawData} with the
-bias (\texttt{M\_\allowbreak{}E\#} or \texttt{M\_\allowbreak{}E1-E2}),
+\texttt{.tdms}, raw & Group \texttt{BJRawData} with the bias
+(\texttt{M\_\allowbreak{}E\#} or \texttt{M\_\allowbreak{}E1-E2}),
 low-gain current \texttt{M\_\allowbreak{}i\#a}, high-gain current
 \texttt{M\_\allowbreak{}i\#b} and piezo \texttt{U\_\allowbreak{}Piezo},
 plus the \texttt{Setup}, \texttt{Calibration\_\allowbreak{}M\#} and
 \texttt{Events} groups & Convert tab or Data \& Traces \\
-\texttt{.\allowbreak{}tdms}, with G & A \texttt{G} channel in siemens
-and \texttt{U\_\allowbreak{}Piezo} (the
-\texttt{*\_\allowbreak{}M.\allowbreak{}tdms} files) & Data \& Traces \\
-\texttt{.\allowbreak{}tdms}, other & Any channel names: type them into
-the channel settings (3.3) & Convert tab or Data \& Traces \\
-\texttt{.\allowbreak{}cvr} & Two tab-separated columns, back-calculated
-current (A) and piezo (nm). Old files with three columns work too & Data
-\& Traces \\
-\texttt{.\allowbreak{}txt} \texttt{.\allowbreak{}csv}
-\texttt{.\allowbreak{}dat} \texttt{.\allowbreak{}tsv} & Any number
-columns; you say which column is what & Data \& Traces \\
-\texttt{.\allowbreak{}pxp} (Igor packed experiment),
-\texttt{.\allowbreak{}ibw} (Igor binary wave) & Every numeric wave is a
-column, named after the wave (\texttt{folder:wave} inside data folders,
-\texttt{wave[0]}, \texttt{wave[1]} \ldots{} for 2D waves) & Data \&
+\texttt{.tdms}, with G & A \texttt{G} channel in siemens and
+\texttt{U\_\allowbreak{}Piezo} (the \texttt{*\_\allowbreak{}M.tdms}
+files) & Data \& Traces \\
+\texttt{.tdms}, other & Any channel names: type them into the channel
+settings (3.3) & Convert tab or Data \& Traces \\
+\texttt{.cvr} & Two tab-separated columns, back-calculated current (A)
+and piezo (nm). Old files with three columns work too & Data \&
 Traces \\
+\texttt{.txt} \texttt{.csv} \texttt{.dat} \texttt{.tsv} & Any number
+columns; you say which column is what & Data \& Traces \\
+\texttt{.pxp} (Igor packed experiment), \texttt{.ibw} (Igor binary wave)
+& Every numeric wave is a column, named after the wave
+(\texttt{folder:wave} inside data folders, \texttt{wave[0]},
+\texttt{wave[1]} \ldots{} for 2D waves) & Data \& Traces \\
 \end{longtable}
 
 TDMS files carry the sampling rate, channel gains, piezo scale and
@@ -399,10 +392,10 @@ there is nothing to merge and all the Ib settings are greyed out.
   piezo.
 \item
   Then either Convert all -\textgreater{} .cvr, which writes one
-  \texttt{.\allowbreak{}cvr} per TDMS file (tick Also write .csv files
-  if you also want a table with time, G, log G, piezo, bias and
-  current), or Load all into analysis, which converts in memory and
-  jumps to Data \& Traces.
+  \texttt{.cvr} per TDMS file (tick Also write .csv files if you also
+  want a table with time, G, log G, piezo, bias and current), or Load
+  all into analysis, which converts in memory and jumps to Data \&
+  Traces.
 \end{enumerate}
 
 \hypertarget{conversion-settings}{%
@@ -497,11 +490,10 @@ read. If the resistor takes the whole bias (E - I x R \textless= 0), or
 the low-gain amplifier saturates, the junction is in contact and beyond
 what can be measured, so the sample is set to the saturated G.
 
-The \texttt{.\allowbreak{}cvr} file contains the back-calculated
-current, I\_bc = G x $G_0$ x E, which is the current you'd get without
-the series resistor. When a \texttt{.\allowbreak{}cvr} is loaded, G is
-calculated back as I\_bc / bias / $G_0$, so the bias in the column
-settings has to be right.
+The \texttt{.cvr} file contains the back-calculated current, I\_bc = G x
+$G_0$ x E, which is the current you'd get without the series resistor.
+When a \texttt{.cvr} is loaded, G is calculated back as I\_bc / bias /
+$G_0$, so the bias in the column settings has to be right.
 
 About the diode calibration: \texttt{Calibration\_\allowbreak{}M\#}
 holds five polynomials (PH, PL, M, NL, NH, coefficients in ascending
@@ -523,19 +515,17 @@ traces that are accepted here.
 \subsection{4.1 Loading}\label{loading}}
 
 Load files takes one or several files, Load folder takes every
-\texttt{.\allowbreak{}tdms}, \texttt{.\allowbreak{}cvr},
-\texttt{.\allowbreak{}txt}, \texttt{.\allowbreak{}csv},
-\texttt{.\allowbreak{}dat}, \texttt{.\allowbreak{}tsv},
-\texttt{.\allowbreak{}pxp} and \texttt{.\allowbreak{}ibw} in a folder.
-Everything you load is analysed together. TDMS files are converted with
-the settings from the Convert tab (3.3), text files with the column
-settings below. Remove drops the selected recordings and their traces,
-Clear drops everything. Show columns lists the columns (or Igor waves)
-of a file with their numbers and lengths, so you know what to type into
-the column settings. The tooltip of a loaded recording says which
-quantities came from the file and which were calculated. The list shows
-how long each recording is and whether it has a piezo signal; click one
-to see it in the overview plot.
+\texttt{.tdms}, \texttt{.cvr}, \texttt{.txt}, \texttt{.csv},
+\texttt{.dat}, \texttt{.tsv}, \texttt{.pxp} and \texttt{.ibw} in a
+folder. Everything you load is analysed together. TDMS files are
+converted with the settings from the Convert tab (3.3), text files with
+the column settings below. Remove drops the selected recordings and
+their traces, Clear drops everything. Show columns lists the columns (or
+Igor waves) of a file with their numbers and lengths, so you know what
+to type into the column settings. The tooltip of a loaded recording says
+which quantities came from the file and which were calculated. The list
+shows how long each recording is and whether it has a piezo signal;
+click one to see it in the overview plot.
 
 \hypertarget{column-settings-text-.cvr-and-igor-files}{%
 \subsection{4.2 Column settings (text, .cvr and Igor
@@ -582,8 +572,7 @@ off \\
 voltage column & Measured bias in V. Replaces the constant bias, and I-V
 analysis needs it & empty \\
 constant bias (V) & Only used without a voltage column. For
-\texttt{.\allowbreak{}cvr} files this must be the bias of the
-measurement & 0.1 \\
+\texttt{.cvr} files this must be the bias of the measurement & 0.1 \\
 series R (ohm) & Series resistor, G = I / (V - I x R) / $G_0$ & 0 \\
 saturated G ($G_0$) & What saturated samples are set to & 100 \\
 piezo / distance column & Piezo position or distance; empty if there is
@@ -1421,10 +1410,9 @@ outliers \\
 n with its error, which estimator, how many traces were accepted, the
 frequency band, the trimming, the n $\sigma$ window and whether the ADF
 test was on. All of this is in
-\texttt{*\_\allowbreak{}Noise\_\allowbreak{}summary.\allowbreak{}txt}
-(13). If OLS and Theil-Sen differ by more than their errors there are
-outliers in the data; I'd trust Theil-Sen and have a look at the
-residual plot.
+\texttt{*\_\allowbreak{}Noise\_\allowbreak{}summary.txt} (13). If OLS
+and Theil-Sen differ by more than their errors there are outliers in the
+data; I'd trust Theil-Sen and have a look at the residual plot.
 
 As a check I ran it on simulated data with n = 1.5 and got n\_TSE = 1.52
 +/- 0.02. After adding 5 \% outlier windows, Theil-Sen gave 1.40 and OLS
@@ -1605,9 +1593,8 @@ Top left you see up to 200 curves (forward blue, backward orange) with
 the averaged forward and backward curves. The other three plots are 2D
 histograms against V of log I, of log(G/$G_0$) with G = I/V, and of
 log(dI/dV / $G_0$). The curves are saved as V/I column pairs in
-\texttt{IV\_\allowbreak{}DATA/\allowbreak{}IV\_\allowbreak{}Curves\_\allowbreak{}F.\allowbreak{}txt}
-and \texttt{IV\_\allowbreak{}Curves\_\allowbreak{}B.\allowbreak{}txt}
-(13).
+\texttt{IV\_\allowbreak{}DATA/\allowbreak{}IV\_\allowbreak{}Curves\_\allowbreak{}F.txt}
+and \texttt{IV\_\allowbreak{}Curves\_\allowbreak{}B.txt} (13).
 
 The mean curves only use sweeps that cover the typical bias range. The
 half sweeps at the start and end of a recording are left out of the
@@ -1833,11 +1820,11 @@ Report $\varepsilon_0$ and $\Gamma$ with their spread over the single
 curves (the medians are in the text). Say whether a was fitted and give
 the bias range of the fit. For TVS, give both polarities. The numbers
 per curve are in
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}models.\allowbreak{}txt},
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}models.txt},
 the most probable curve with its fit in
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}most\_\allowbreak{}probable.\allowbreak{}txt},
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}most\_\allowbreak{}probable.txt},
 and the summary in
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}models\_\allowbreak{}summary.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}models\_\allowbreak{}summary.txt}
 (13).
 
 \hypertarget{egain-ensemble-tab}{%
@@ -2115,115 +2102,112 @@ From
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}config.\allowbreak{}json}
-& All settings of all tabs, the loaded files and the trace summary &
-always \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}Good\_\allowbreak{}Curves.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}config.json} & All
+settings of all tabs, the loaded files and the trace summary & always \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Good\_\allowbreak{}Curves.txt}
 & All accepted traces: trace, file, z\_nm, logG\_$G_0$ & Data \&
 Traces \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}all\_\allowbreak{}traces.\allowbreak{}npz}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}all\_\allowbreak{}traces.npz}
 & All traces including the rejected ones (NumPy file) & Data \&
 Traces \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}logHist.\allowbreak{}txt}
-& 1D histogram, logG\_$G_0$ and counts & Histograms \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}3D\_\allowbreak{}Histogram.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}logHist.txt} & 1D
+histogram, logG\_$G_0$ and counts & Histograms \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}3D\_\allowbreak{}Histogram.txt}
 & 2D histogram as a matrix, rows = log G, columns = distance &
 Histograms \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}3D\_\allowbreak{}hist\_\allowbreak{}scales.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}3D\_\allowbreak{}hist\_\allowbreak{}scales.txt}
 & Bin centres, distance\_nm and logG\_$G_0$ & Histograms \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}clusterN\_\allowbreak{}logHist.\allowbreak{}txt},
-\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}3D\_\allowbreak{}Histogram.\allowbreak{}txt},
-\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}3D\_\allowbreak{}hist\_\allowbreak{}scales.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}clusterN\_\allowbreak{}logHist.txt},
+\texttt{...\_\allowbreak{}3D\_\allowbreak{}Histogram.txt},
+\texttt{...\_\allowbreak{}3D\_\allowbreak{}hist\_\allowbreak{}scales.txt}
 & The same for each cluster & Histograms, if there are clusters \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}peak\_\allowbreak{}fit.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}peak\_\allowbreak{}fit.txt}
 & Centre, error, G, $\sigma$, FWHM, amplitude and dwell time of each
 peak & Histograms, after a fit \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}plateau length.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}plateau length.txt}
 & Plateau length of every trace, one column per window & Plateau
 length \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}Plateau\_\allowbreak{}length\_\allowbreak{}parameters.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Plateau\_\allowbreak{}length\_\allowbreak{}parameters.txt}
 & Statistics of each window and the tunnelling $\beta$ & Plateau
 length \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}Correlation.\allowbreak{}txt},
-\texttt{\_\allowbreak{}Correlation\_\allowbreak{}scales.\allowbreak{}txt}
-& Correlation matrix; bin centres and mean histogram & Correlation \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}Clustering\_\allowbreak{}Results.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Correlation.txt},
+\texttt{\_\allowbreak{}Correlation\_\allowbreak{}scales.txt} &
+Correlation matrix; bin centres and mean histogram & Correlation \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Clustering\_\allowbreak{}Results.txt}
 & Traces per cluster, silhouette, settings & Clustering \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}cluster\_\allowbreak{}labels.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}cluster\_\allowbreak{}labels.txt}
 & Trace, cluster, PC1-PC3 & Clustering \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}cluster\_\allowbreak{}logHist.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}cluster\_\allowbreak{}logHist.txt}
 & 1D histogram of each cluster & Clustering \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}windows.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}windows.txt}
 & Every window: segment, start, samples, G, noise power, kurtosis,
 drift, ADF p, accepted & Flicker noise \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}PSD.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}PSD.txt}
 & Frequency, mean PSD, floor PSD & Flicker noise \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}scaling.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}scaling.txt}
 & n, Pearson r, Kendall $\tau$, 2D Gaussian rho & Flicker noise \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}bell\_\allowbreak{}hist.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}bell\_\allowbreak{}hist.txt}
 & Bell histogram as a matrix & Flicker noise \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}summary.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}summary.txt}
 & n with errors for all estimators, bell parameters, counts, settings &
 Flicker noise \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}DATA/\allowbreak{}IV\_\allowbreak{}Curves\_\allowbreak{}F.\allowbreak{}txt},
-\texttt{IV\_\allowbreak{}Curves\_\allowbreak{}B.\allowbreak{}txt} & V/I
-column pairs for every forward / backward curve & I-V \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}models.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}DATA/\allowbreak{}IV\_\allowbreak{}Curves\_\allowbreak{}F.txt},
+\texttt{IV\_\allowbreak{}Curves\_\allowbreak{}B.txt} & V/I column pairs
+for every forward / backward curve & I-V \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}models.txt}
 & Per curve: low-bias G, $V_t^{+}$, $V_t^{-}$, $\varepsilon_0$ and a
 from TVS, $\varepsilon_0$, $\Gamma$ and a from the fit with errors,
 $R^{2}$ & I-V, after the model fit \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}models\_\allowbreak{}summary.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}models\_\allowbreak{}summary.txt}
 & Fits of the mean curves, medians, settings & I-V, after the model
 fit \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}most\_\allowbreak{}probable.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}most\_\allowbreak{}probable.txt}
 & Most probable current per bias bin, $\sigma$, points, fitted current &
 I-V, after the model fit \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}events.\allowbreak{}txt}
-& Every event: segment, sample, time, mechanical yes/no, dG/dt, log G
-before and after & Events \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}events\_\allowbreak{}per\_\allowbreak{}trace.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}events.txt} & Every
+event: segment, sample, time, mechanical yes/no, dG/dt, log G before and
+after & Events \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}events\_\allowbreak{}per\_\allowbreak{}trace.txt}
 & Flickers and mechanical events per trace and its class & Events \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}hold\_\allowbreak{}time\_\allowbreak{}histogram.\allowbreak{}txt},
-\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}scales.\allowbreak{}txt},
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}hold\_\allowbreak{}most\_\allowbreak{}probable.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}hold\_\allowbreak{}time\_\allowbreak{}histogram.txt},
+\texttt{...\_\allowbreak{}scales.txt},
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}hold\_\allowbreak{}most\_\allowbreak{}probable.txt}
 & Conductance-time histogram of the holds and the most probable log G
 per time & Events, with holds \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}events\_\allowbreak{}summary.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}events\_\allowbreak{}summary.txt}
 & Counts and settings & Events \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}EGaIn\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}logJ.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}EGaIn\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}logJ.txt}
 & Per bias: \textless log\textbar J\textbar\textgreater,
 $\sigma_\mathrm{log}$, CI, sweeps & EGaIn \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}EGaIn\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}sweeps\_\allowbreak{}logJ.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}EGaIn\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}sweeps\_\allowbreak{}logJ.txt}
 & log\textbar J\textbar{} of every sweep on the bias grid & EGaIn \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}EGaIn\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}logR.\allowbreak{}txt},
-\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}Vtrans.\allowbreak{}txt},
-\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}summary.\allowbreak{}txt}
-& Rectification per bias, $V_\mathrm{trans}$ per cycle, summary &
-EGaIn \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}EGaIn\_\allowbreak{}beta.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}EGaIn\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}logR.txt},
+\texttt{...\_\allowbreak{}Vtrans.txt},
+\texttt{...\_\allowbreak{}summary.txt} & Rectification per bias,
+$V_\mathrm{trans}$ per cycle, summary & EGaIn \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}EGaIn\_\allowbreak{}beta.txt}
 & $\beta$, $J_0$ and the points of the fit & EGaIn, after Fit $\beta$ \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}junctions.\allowbreak{}txt}
-& Per trace: junction yes/no, flat plateau length, plateau log G &
-Junction statistics \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}junction\_\allowbreak{}blocks.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}junctions.txt} & Per
+trace: junction yes/no, flat plateau length, plateau log G & Junction
+statistics \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}junction\_\allowbreak{}blocks.txt}
 & Per block: mean trace number, yield, its error, median plateau log G,
 traces & Junction statistics \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}junction\_\allowbreak{}summary.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}junction\_\allowbreak{}summary.txt}
 & Yield, medians, drift, settings & Junction statistics \\
-\texttt{\textless{}name\textgreater{}\_\allowbreak{}piezo\_\allowbreak{}modulation.\allowbreak{}txt}
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}piezo\_\allowbreak{}modulation.txt}
 & t, logG, amplitudes, $\beta$ and phase per window & Piezo
 modulation \\
-\texttt{figures/\allowbreak{}\textless{}name\textgreater{}\_\allowbreak{}\textless{}plot\textgreater{}.\allowbreak{}pdf}
-and \texttt{.\allowbreak{}png} & Every plot as its own figure (13.1) &
-every tab \\
-\texttt{\textless{}name\textgreater{}.\allowbreak{}opju} & Origin
-project with the plot data and graphs, if ``plot with'' includes Origin
-(13.1) & every tab \\
+\texttt{figures/\allowbreak{}\textless{}name\textgreater{}\_\allowbreak{}\textless{}plot\textgreater{}.pdf}
+and \texttt{.png} & Every plot as its own figure (13.1) & every tab \\
+\texttt{\textless{}name\textgreater{}.opju} & Origin project with the
+plot data and graphs, if ``plot with'' includes Origin (13.1) & every
+tab \\
 \end{longtable}
 
 Plateau length, Junction statistics and Correlation results get the
 cluster name added
-(e.g.~\texttt{\textless{}name\textgreater{}\_\allowbreak{}cluster2\_\allowbreak{}Correlation.\allowbreak{}txt})
+(e.g.~\texttt{\textless{}name\textgreater{}\_\allowbreak{}cluster2\_\allowbreak{}Correlation.txt})
 if they were calculated for one cluster.
 
 \hypertarget{figures}{%
@@ -2263,7 +2247,7 @@ Files & PDF with editable text, plus a 600 dpi PNG & vector, or at least
 All of this can be changed under File -\textgreater{} Figure export
 settings (width, font, font size, line widths, tick direction, formats
 pdf/png/tiff/svg/eps, resolution). The settings are remembered and also
-written to \texttt{*\_\allowbreak{}config.\allowbreak{}json}.
+written to \texttt{*\_\allowbreak{}config.json}.
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4936}}
@@ -2272,7 +2256,7 @@ written to \texttt{*\_\allowbreak{}config.\allowbreak{}json}.
 \toprule\noalign{}
 \begin{minipage}[b]{\linewidth}\raggedright
 Figure files
-(\texttt{figures/\allowbreak{}\textless{}name\textgreater{}\_\allowbreak{}.\allowbreak{}.\allowbreak{}.\allowbreak{}})
+(\texttt{figures/\allowbreak{}\textless{}name\textgreater{}\_\allowbreak{}...})
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
 What they show
 \end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
@@ -2327,13 +2311,13 @@ histograms & I-V \\
 \texttt{events\_\allowbreak{}hold\_\allowbreak{}time\_\allowbreak{}histogram}
 & Events & Events \\
 \texttt{EGaIn\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}egain\_\allowbreak{}JV},
-\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}logJ\_\allowbreak{}2D\_\allowbreak{}histogram},
-\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}logJ\_\allowbreak{}histogram},
-\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}rectification\_\allowbreak{}histogram},
-\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}transition\_\allowbreak{}voltage\_\allowbreak{}histogram},
-\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}SLM\_\allowbreak{}fit},
-\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}beta} &
-Ensemble junctions, one set per data set & EGaIn \\
+\texttt{...\_\allowbreak{}logJ\_\allowbreak{}2D\_\allowbreak{}histogram},
+\texttt{...\_\allowbreak{}logJ\_\allowbreak{}histogram},
+\texttt{...\_\allowbreak{}rectification\_\allowbreak{}histogram},
+\texttt{...\_\allowbreak{}transition\_\allowbreak{}voltage\_\allowbreak{}histogram},
+\texttt{...\_\allowbreak{}SLM\_\allowbreak{}fit},
+\texttt{...\_\allowbreak{}beta} & Ensemble junctions, one set per data
+set & EGaIn \\
 \texttt{IV\_\allowbreak{}SLM\_\allowbreak{}fit},
 \texttt{IV\_\allowbreak{}Fowler\_\allowbreak{}Nordheim},
 \texttt{IV\_\allowbreak{}transition\_\allowbreak{}voltage\_\allowbreak{}histogram},
@@ -2361,11 +2345,11 @@ colours, axis ranges, legend and labels as the exported figure, so they
 look the same and stay editable. Histogram steps keep the original bin
 centres and counts next to the step outline, and heatmaps use the same
 colour map. Every tab gets its own folder in the Project Explorer, and
-the project is saved as
-\texttt{\textless{}name\textgreater{}.\allowbreak{}opju} in the results
-folder. With \texttt{Origin} alone no figure files are written. File
--\textgreater{} Send plots to Origin does the same for the current plots
-without saving anything, which is handy for trying settings.
+the project is saved as \texttt{\textless{}name\textgreater{}.opju} in
+the results folder. With \texttt{Origin} alone no figure files are
+written. File -\textgreater{} Send plots to Origin does the same for the
+current plots without saving anything, which is handy for trying
+settings.
 
 This needs Windows, Origin 2021 or newer and the Python package
 originpro (\texttt{py -m pip install originpro}). If Origin is already
@@ -2381,10 +2365,10 @@ files}\label{settings-and-converted-files}}
 
 File -\textgreater{} Save settings writes all settings to a JSON file
 and File -\textgreater{} Load settings reads them back; a
-\texttt{*\_\allowbreak{}config.\allowbreak{}json} from a results folder
-works too, which is handy for repeating an analysis. The
-\texttt{.\allowbreak{}cvr} (and \texttt{.\allowbreak{}csv}) files from
-the Convert tab are written separately, see 3.2.
+\texttt{*\_\allowbreak{}config.json} from a results folder works too,
+which is handy for repeating an analysis. The \texttt{.cvr} (and
+\texttt{.csv}) files from the Convert tab are written separately, see
+3.2.
 
 \hypertarget{troubleshooting}{%
 \section{14. Troubleshooting}\label{troubleshooting}}
@@ -2411,8 +2395,8 @@ All traces rejected with ``never reaches low limit'' & The noise floor
 is above \emph{low limit to check}. Put both low limits about half a
 decade above the floor. With holds in the measurement, leave \emph{join
 pull-hold-pull} on. \\
-Conductance off by a constant factor & For \texttt{.\allowbreak{}cvr}
-files the \emph{constant bias} in the column settings has to match the
+Conductance off by a constant factor & For \texttt{.cvr} files the
+\emph{constant bias} in the column settings has to match the
 measurement; for other files check the \emph{Ia / Ib scale} and
 \emph{conductance unit}. For TDMS, look at the bias channel and series
 resistor in the Convert preview. \\
@@ -2483,22 +2467,20 @@ numbers just continue and every trace remembers which file it came from.
 The program never changes your data files, it only reads them and writes
 results to the folder you pick.
 
-To repeat an old analysis, load the
-\texttt{*\_\allowbreak{}config.\allowbreak{}json} from its results
-folder with File -\textgreater{} Load settings, load the same data and
-run the same tabs.
+To repeat an old analysis, load the \texttt{*\_\allowbreak{}config.json}
+from its results folder with File -\textgreater{} Load settings, load
+the same data and run the same tabs.
 
 To check that an installation works, open a command prompt in the
-program folder and run
-\texttt{GZero.\allowbreak{}exe --selftest report.\allowbreak{}txt} (or
-\texttt{py GZero.\allowbreak{}py --selftest report.\allowbreak{}txt}).
-It runs the simulation, trace detection, histogram fit, dwell time,
-clustering, noise analysis, junction yield, event detection, I-V
-detection, the single-level fit (also at 300 K on the energy grid with
-Levenberg-Marquardt) and TVS, the EGaIn statistics with $\beta$ on
-simulated junctions, and the figure export without opening a window and
-writes the results to \texttt{report.\allowbreak{}txt}. If everything is
-fine the last line is \texttt{SELFTEST OK}.
+program folder and run \texttt{GZero.exe --selftest report.txt} (or
+\texttt{py GZero.py --selftest report.txt}). It runs the simulation,
+trace detection, histogram fit, dwell time, clustering, noise analysis,
+junction yield, event detection, I-V detection, the single-level fit
+(also at 300 K on the energy grid with Levenberg-Marquardt) and TVS, the
+EGaIn statistics with $\beta$ on simulated junctions, and the figure
+export without opening a window and writes the results to
+\texttt{report.txt}. If everything is fine the last line is
+\texttt{SELFTEST OK}.
 
 \hypertarget{references}{%
 \section{15. References}\label{references}}
