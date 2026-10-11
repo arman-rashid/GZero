@@ -1,83 +1,44 @@
-"""Makes docs/User_Manual.pdf out of User_Manual.md.
-
-The ```latex blocks are drawn with matplotlib, Qt does the layout and prints
-the pdf.
+"""Makes docs/User_Manual.pdf out of docs/User_Manual.md with pandoc and LaTeX.
 
     py docs/build_manual.py
+
+Needs pandoc (https://pandoc.org) and a LaTeX distribution with latexmk
+(MiKTeX or TeX Live). The layout is in docs/latex/preamble.tex, the
+conversion rules (formulas, table widths, title) in docs/latex/manual.lua.
+The intermediate docs/latex/User_Manual.tex is kept, so the PDF can also be
+built with any LaTeX editor.
 """
 
 import os
-import re
+import shutil
+import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+LATEX = os.path.join(HERE, "latex")
 MD = os.path.join(HERE, "User_Manual.md")
+TEX = os.path.join(LATEX, "User_Manual.tex")
 PDF = os.path.join(HERE, "User_Manual.pdf")
-IMG = os.path.join(HERE, "img")
 
 
-def render_formulas(md: str) -> str:
-    import matplotlib
-    matplotlib.use("Agg")
-    import matplotlib.pyplot as plt
-
-    os.makedirs(IMG, exist_ok=True)
-    count = 0
-
-    def repl(m):
-        nonlocal count
-        count += 1
-        tex = m.group(1).strip()
-        # mathtext has no \qquad spacing inside \mathrm etc.; keep it simple
-        tex = tex.replace(r"\qquad", r"\quad\quad")
-        name = f"eq{count}.png"
-        fig = plt.figure(figsize=(0.01, 0.01))
-        fig.text(0, 0, f"${tex}$", fontsize=13)
-        fig.savefig(os.path.join(IMG, name), dpi=220, bbox_inches="tight", pad_inches=0.06,
-                    transparent=False, facecolor="white")
-        plt.close(fig)
-        return f"![formula {count}](img/{name})"
-
-    return re.sub(r"```latex\n(.*?)\n```", repl, md, flags=re.S)
+def run(cmd, cwd):
+    print(" ".join(cmd))
+    subprocess.run(cmd, cwd=cwd, check=True)
 
 
 def build():
-    from PySide6.QtCore import QMarginsF, QSizeF, QUrl
-    from PySide6.QtGui import QFont, QPageLayout, QPageSize, QTextDocument
-    from PySide6.QtPrintSupport import QPrinter
-    from PySide6.QtWidgets import QApplication
-
-    app = QApplication.instance() or QApplication(sys.argv)  # noqa: F841 (fonts need an app)
-    md = open(MD, encoding="utf-8").read()
-    md = render_formulas(md)
-
-    doc = QTextDocument()
-    doc.setBaseUrl(QUrl.fromLocalFile(HERE + os.sep))
-    doc.setDefaultFont(QFont("Segoe UI", 10))
-    doc.setDefaultStyleSheet("table { border-collapse: collapse; } td, th { padding: 3px; }")
-    doc.setMarkdown(md)
-    # formula images are rendered at 220 dpi: give them their physical size,
-    # capped at the text width, so they stay sharp and never overflow the page
-    from PySide6.QtGui import QImage
-    html = doc.toHtml()
-
-    def size_img(m):
-        src = m.group(1)
-        im = QImage(os.path.join(HERE, src))
-        w = min(im.width() * 96 / 220 * 0.85, 600) if not im.isNull() else 600
-        return f'<img src="{src}" width="{int(w)}"'
-
-    html = re.sub(r'<img src="([^"]+)"', size_img, html)
-    doc.setHtml(html)
-
-    printer = QPrinter(QPrinter.HighResolution)
-    printer.setOutputFormat(QPrinter.PdfFormat)
-    printer.setOutputFileName(PDF)
-    printer.setPageLayout(QPageLayout(QPageSize(QPageSize.A4), QPageLayout.Portrait,
-                                      QMarginsF(18, 16, 18, 16), QPageLayout.Millimeter))
-    printer.setDocName("GZero - User Manual")
-    doc.setPageSize(QSizeF(printer.pageRect(QPrinter.Point).size()))
-    doc.print_(printer)
+    for tool in ("pandoc", "latexmk"):
+        if shutil.which(tool) is None:
+            sys.exit(f"{tool} not found: install pandoc and a LaTeX distribution (MiKTeX or TeX Live).")
+    run(["pandoc", MD, "-f", "markdown+pipe_tables-implicit_figures", "-t", "latex", "-s", "--toc",
+         "-o", TEX, "--lua-filter", os.path.join(LATEX, "manual.lua"),
+         "-H", os.path.join(LATEX, "preamble.tex"),
+         "-V", "documentclass=article", "-V", "fontsize=11pt", "-V", "papersize=a4",
+         "-V", "date=", "-V", "colorlinks=true", "-V", "toc-title=Contents"], HERE)
+    out = os.path.join(LATEX, "build")
+    run(["latexmk", "-pdf", "-interaction=nonstopmode", "-halt-on-error", f"-outdir={out}",
+         os.path.basename(TEX)], LATEX)
+    shutil.copyfile(os.path.join(out, "User_Manual.pdf"), PDF)
     print(f"wrote {PDF}")
 
 

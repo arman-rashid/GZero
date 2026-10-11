@@ -1,0 +1,2830 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\PassOptionsToPackage{dvipsnames,svgnames,x11names}{xcolor}
+%
+\documentclass[
+  11pt,
+  a4paper,
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math} % this also loads fontspec
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+\usepackage{lmodern}
+\ifPDFTeX\else
+  % xetex/luatex font selection
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+% Layout of the GZero user manual (used by docs/build_manual.py through pandoc).
+\usepackage[a4paper,top=25mm,bottom=25mm,left=25mm,right=25mm,headheight=14pt]{geometry}
+\usepackage{lmodern}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage[T1]{fontenc}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\definecolor{gzblue}{HTML}{0072B2}
+\definecolor{gzgrey}{HTML}{F3F4F6}
+\usepackage{titlesec}
+\titleformat{\section}{\Large\bfseries\color{gzblue}}{}{0pt}{}[\vspace{2pt}\titlerule]
+\titleformat{\subsection}{\large\bfseries}{}{0pt}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{}{0pt}{}
+\titlespacing*{\section}{0pt}{18pt plus 4pt minus 2pt}{8pt}
+\titlespacing*{\subsection}{0pt}{12pt plus 3pt minus 2pt}{4pt}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small GZero -- User Manual}
+\fancyhead[R]{\small\nouppercase{\leftmark}}
+\fancyfoot[C]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\sectionmark}[1]{\markboth{#1}{}}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[C]{\small\thepage}\renewcommand{\headrulewidth}{0pt}}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt plus 1pt}
+\usepackage{etoolbox}
+% tables: smaller type, a little more row height, ragged cells
+\AtBeginEnvironment{longtable}{\small\renewcommand{\arraystretch}{1.25}}
+\usepackage{ragged2e}
+\setlength{\LTpre}{6pt}
+\setlength{\LTpost}{6pt}
+\usepackage{enumitem}
+\setlist{itemsep=2pt,topsep=4pt}
+% code blocks on a light background
+\usepackage{fvextra}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+\BeforeBeginEnvironment{verbatim}{\begingroup\small}
+\AfterEndEnvironment{verbatim}{\endgroup}
+\usepackage[most]{tcolorbox}
+\usepackage{tocloft}
+\renewcommand{\cftsecfont}{\bfseries}
+\renewcommand{\cftsecpagefont}{\bfseries}
+\setlength{\cftbeforesecskip}{3pt}
+\setcounter{tocdepth}{2}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=gzblue,urlcolor=gzblue,citecolor=gzblue,
+  pdftitle={GZero - User Manual},pdfauthor={arman-rashid}}
+\urlstyle{same}
+\sloppy
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same}
+\hypersetup{
+  pdftitle={GZero - User Manual},
+  colorlinks=true,
+  linkcolor={Maroon},
+  filecolor={Maroon},
+  citecolor={Blue},
+  urlcolor={Blue},
+  pdfcreator={LaTeX via pandoc}}
+
+\title{GZero - User Manual}
+\usepackage{etoolbox}
+\makeatletter
+\providecommand{\subtitle}[1]{% add subtitle to \maketitle
+  \apptocmd{\@title}{\par {\large #1 \par}}{}{}
+}
+\makeatother
+\subtitle{Break-junction analysis software. Version 1.4, October 2026}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\renewcommand*\contentsname{Contents}
+{
+\hypersetup{linkcolor=}
+\setcounter{tocdepth}{3}
+\tableofcontents
+}
+\hypertarget{introduction-and-installation}{%
+\section{1. Introduction and
+installation}\label{introduction-and-installation}}
+
+I wrote GZero to analyse single-molecule break-junction data (MCBJ and
+STM-BJ) in one place, from the raw TDMS files of the setup to the
+figures for a paper. It converts the raw signals to conductance, cuts
+out the single traces, makes the usual histograms, measures plateau
+lengths, calculates 2D correlation maps, clusters traces and gets the
+flicker-noise exponent. It also tells you how often a molecule actually
+bridged the gap (the junction yield) and whether the conductance drifted
+during the run. For I-V sweeps it fits the single-level model and finds
+the transition voltage. For conductance-time traces it finds flickering
+and mechanical switching events, and a separate tab does the ensemble
+statistics of large-area (EGaIn) junctions. Piezo modulation is covered
+too, and there is a simulator that makes fake data with known answers,
+which I use to check settings.
+
+\hypertarget{the-tabs}{%
+\subsection{1.1 The tabs}\label{the-tabs}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.2795}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.6905}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Tab
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+What it's for
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Convert TDMS & Raw TDMS channels to conductance,
+\texttt{.\allowbreak{}cvr} export \\
+Data \& Traces & Loading files, finding and cutting traces, looking
+through them, marking bad ones \\
+Histograms & 1D log G histogram, 2D conductance-distance histogram,
+Gaussian fits \\
+Plateau length & How long the molecular plateau is, in up to three
+windows; tunnelling decay \\
+Junction statistics & Which traces have a molecular plateau (junction
+yield), the conductance of each plateau, drifts over the measurement \\
+Correlation & 2D cross-correlation of conductance values within
+traces \\
+Clustering & PCA and clustering of traces into groups \\
+Flicker noise & Noise power against conductance and the scaling exponent
+n \\
+Events & Flickering and mechanical switching in G(t), conductance-time
+histograms of the holds \\
+I-V & Forward and backward bias sweeps, dI/dV, 2D I-V histograms,
+single-level model fit, transition voltage spectroscopy \\
+Piezo modulation & Decay constant $\beta$ from a modulated piezo \\
+EGaIn (ensemble) & Large-area junctions: log\textbar J\textbar{}
+statistics, yield, rectification, $V_\mathrm{trans}$, $\beta$ from a
+length series \\
+Simulation & Synthetic recordings \\
+\end{longtable}
+
+\hypertarget{what-you-need}{%
+\subsection{1.2 What you need}\label{what-you-need}}
+
+Windows 10 or 11 (64 bit) for the exe. From Python it should also run on
+macOS and Linux, though I've only used it on Windows. 8 GB of RAM is
+fine for normal files. Big files are loaded completely into memory: my 1
+GB test file (73 min at 10 kHz) took about 7 s to load, and I'd plan
+roughly 3-4 GB of RAM per GB of TDMS. The window needs about 1400 x 900
+pixels to be comfortable.
+
+\hypertarget{installing-and-starting}{%
+\subsection{1.3 Installing and starting}\label{installing-and-starting}}
+
+The simplest way is the exe. Copy the whole \texttt{GZero} folder
+somewhere,
+e.g.~\texttt{C:\textbackslash{}Programs\textbackslash{}GZero}, and
+double-click \texttt{GZero.\allowbreak{}exe}. Don't move the exe out of
+the folder, it needs the files next to it. This manual is in
+\texttt{docs\textbackslash{}User\_\allowbreak{}Manual.\allowbreak{}pdf}
+and also opens from Help -\textgreater{} User manual (F1).
+
+The source code is on GitHub: https://github.com/arman-rashid/GZero
+(Apache License 2.0). To run it from Python (3.9 or newer), go to the
+project folder (the one with \texttt{GZero.\allowbreak{}py}) and run
+
+\begin{verbatim}
+py -m pip install -r requirements.txt
+py GZero.py
+\end{verbatim}
+
+It needs PySide6, numpy, scipy, matplotlib, pandas, scikit-learn, npTDMS
+and igor2 (for Igor \texttt{.\allowbreak{}pxp} /
+\texttt{.\allowbreak{}ibw} files).
+
+If you change the code and want a new exe:
+\texttt{py -m pip install pyinstaller}, then
+\texttt{py build\_\allowbreak{}exe.\allowbreak{}py} in the same folder.
+The new version ends up in
+\texttt{dist\textbackslash{}GZero\textbackslash{}}.
+
+\hypertarget{the-window}{%
+\subsection{1.4 The window}\label{the-window}}
+
+Every tab has the settings and buttons on the left and the plots on the
+right. The toolbar above each plot lets you zoom, pan and save what's on
+screen. When you save results, each plot is also written as a separate
+figure in journal format (13.1). Most settings have a tooltip, so hover
+over them if something isn't clear. The status bar at the bottom says
+what the program is doing; longer calculations run in the background and
+the window doesn't freeze.
+
+Settings are only kept while the program is open. File -\textgreater{}
+Save settings writes them to a file and File -\textgreater{} Load
+settings reads them back. You can also load the
+\texttt{*\_\allowbreak{}config.\allowbreak{}json} from an old results
+folder, which is the easiest way to repeat an analysis with exactly the
+same settings.
+
+\hypertarget{quick-start}{%
+\section{2. Quick start}\label{quick-start}}
+
+This is the short version of a normal analysis, from a raw file to a
+histogram and a noise exponent. The chapter numbers point to the
+details.
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Go to Data \& Traces, click Load files and pick a
+  \texttt{.\allowbreak{}tdms}, \texttt{.\allowbreak{}cvr}, text or Igor
+  \texttt{.\allowbreak{}pxp} file (several at once is fine, or use Load
+  folder). For everything except TDMS check the column settings first:
+  which column is what, and the bias if the file has no voltage column
+  (4.2).
+\item
+  The traces are found automatically after the first load. Under the
+  button you see how many were found, how many were accepted and why the
+  rest were thrown out.
+\item
+  Click through a few traces with \textless{} and \textgreater{} or the
+  arrow keys. Green means accepted, red rejected. If good-looking traces
+  are being rejected, change the limits (4.4) and press Detect / cut
+  traces again.
+\item
+  G and B mark the current trace as good or bad by hand.
+\item
+  Open Histograms. The 1D and 2D histograms are already there.
+\item
+  Put \emph{fit from} and \emph{fit to} around the molecular peak,
+  choose how many Gaussians, click Fit peaks (5).
+\item
+  In Plateau length, set window 1 around the peak and click Calculate
+  (6).
+\item
+  In Flicker noise, click the Morris et al.~2025 preset, then Peak from
+  histogram fit, then Run noise analysis. n and its error appear under
+  the button (9).
+\item
+  Correlation and Clustering if you need them (7, 8). Junction
+  statistics gives the yield and checks for drift (6.4).
+\item
+  File -\textgreater{} Save results (Ctrl+S), choose where and give the
+  folder a name. Everything goes in there: text files, figures, settings
+  (13).
+\end{enumerate}
+
+If you just want to try the program, go to Simulation and click
+Generate. You get a fake data set where you know the right answers, and
+you can see if the analysis finds them (12).
+
+\hypertarget{data-formats-and-the-convert-tab}{%
+\section{3. Data formats and the Convert
+tab}\label{data-formats-and-the-convert-tab}}
+
+You only need the Convert tab for raw \texttt{.\allowbreak{}tdms} files.
+It turns them into conductance (G/$G_0$) and either writes
+\texttt{.\allowbreak{}cvr} files or loads the result straight into the
+analysis. All other file types are loaded in Data \& Traces (4).
+
+\hypertarget{file-types}{%
+\subsection{3.1 File types}\label{file-types}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2801}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4882}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2017}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Format
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+What's in it
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Where to load it
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\texttt{.\allowbreak{}tdms}, raw & Group \texttt{BJRawData} with the
+bias (\texttt{M\_\allowbreak{}E\#} or \texttt{M\_\allowbreak{}E1-E2}),
+low-gain current \texttt{M\_\allowbreak{}i\#a}, high-gain current
+\texttt{M\_\allowbreak{}i\#b} and piezo \texttt{U\_\allowbreak{}Piezo},
+plus the \texttt{Setup}, \texttt{Calibration\_\allowbreak{}M\#} and
+\texttt{Events} groups & Convert tab or Data \& Traces \\
+\texttt{.\allowbreak{}tdms}, with G & A \texttt{G} channel in siemens
+and \texttt{U\_\allowbreak{}Piezo} (the
+\texttt{*\_\allowbreak{}M.\allowbreak{}tdms} files) & Data \& Traces \\
+\texttt{.\allowbreak{}tdms}, other & Any channel names: type them into
+the channel settings (3.3) & Convert tab or Data \& Traces \\
+\texttt{.\allowbreak{}cvr} & Two tab-separated columns, back-calculated
+current (A) and piezo (nm). Old files with three columns work too & Data
+\& Traces \\
+\texttt{.\allowbreak{}txt} \texttt{.\allowbreak{}csv}
+\texttt{.\allowbreak{}dat} \texttt{.\allowbreak{}tsv} & Any number
+columns; you say which column is what & Data \& Traces \\
+\texttt{.\allowbreak{}pxp} (Igor packed experiment),
+\texttt{.\allowbreak{}ibw} (Igor binary wave) & Every numeric wave is a
+column, named after the wave (\texttt{folder:wave} inside data folders,
+\texttt{wave[0]}, \texttt{wave[1]} \ldots{} for 2D waves) & Data \&
+Traces \\
+\end{longtable}
+
+TDMS files carry the sampling rate, channel gains, piezo scale and
+series resistor. Text files don't, so for those you type them into the
+column settings (4.2). Igor waves carry their x scaling: if a wave has x
+in seconds, the sampling rate comes from it.
+
+The program never recalculates what a file already gives. If there is a
+conductance column or channel, G is taken from it. If there is a voltage
+column or bias channel, it is used as the bias and the constant bias is
+ignored. Piezo, current and time columns are also used as they are. Only
+what's missing is calculated: G from the current and the bias, or the
+current from G and the bias.
+
+The current can come from a single-stage amplifier (one current, Ia) or
+a dual-stage amplifier (a low-gain stage Ia and a high-gain stage Ib
+recorded at the same time). The \emph{current amplifier} setting says
+which one (3.3 for TDMS, 4.2 for the other files). With a single stage
+there is nothing to merge and all the Ib settings are greyed out.
+
+\hypertarget{using-the-tab}{%
+\subsection{3.2 Using the tab}\label{using-the-tab}}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Add files or Add folder. When you click a file, the panel shows its
+  sampling rate, length, modules, channel gains, series resistor and
+  whether diode calibration data is in it.
+\item
+  Change the conversion settings if needed (3.3). Empty fields mean
+  ``take it from the file''.
+\item
+  Preview selected shows the raw current channels, log(G/$G_0$) with the
+  event marks (green = approach, red = retract, grey = hold) and the
+  piezo.
+\item
+  Then either Convert all -\textgreater{} .cvr, which writes one
+  \texttt{.\allowbreak{}cvr} per TDMS file (tick Also write .csv files
+  if you also want a table with time, G, log G, piezo, bias and
+  current), or Load all into analysis, which converts in memory and
+  jumps to Data \& Traces.
+\end{enumerate}
+
+\hypertarget{conversion-settings}{%
+\subsection{3.3 Conversion settings}\label{conversion-settings}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2186}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.5456}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2058}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+module & Which measurement module to use (\texttt{M\_\allowbreak{}E\#},
+\texttt{M\_\allowbreak{}i\#a}, \texttt{M\_\allowbreak{}i\#b}) & 1 \\
+current amplifier & \texttt{dual stage}: Ia (low gain) and Ib (high
+gain) are merged. \texttt{single stage}: only the Ia channel is used,
+nothing is merged & dual stage \\
+Ia channel / Ib channel & \texttt{auto} =
+\texttt{M\_\allowbreak{}i\textless{}module\textgreater{}a} /
+\texttt{M\_\allowbreak{}i\textless{}module\textgreater{}b}. Type another
+channel name if your file uses other names; a channel that is already in
+A needs gain 1 & auto \\
+conductance channel & \texttt{auto} uses a \texttt{G} channel only if
+there are no current channels. Type a channel name to take G directly
+from that channel, \texttt{none} to always calculate it & auto \\
+conductance unit & Unit of the conductance channel: \texttt{auto} (from
+the channel, otherwise S), \texttt{S}, \texttt{G/\allowbreak{}G0} or
+\texttt{log G/\allowbreak{}G0} & auto \\
+piezo channel & \texttt{auto} = \texttt{U\_\allowbreak{}Piezo}; another
+name, or \texttt{none} & auto \\
+calibration & \texttt{linear}: I = (V - offset) x gain x correction.
+\texttt{diode}: the piecewise polynomial stored in
+\texttt{Calibration\_\allowbreak{}M\#} (log amplifier) & linear \\
+gain Ia / gain Ib (A/V) & Amplifier gains; empty = the
+\texttt{scale\_\allowbreak{}factor} stored with the channel & from
+file \\
+offset / correction Ia, Ib & Offset (V) and correction factor for the
+linear calibration & 0 / 1 \\
+amplification & Extra factor on the current & 1 \\
+invert current & Flips the sign & off \\
+combine Ia / Ib & Dual stage only. \texttt{auto} uses the high-gain Ib
+unless it's saturated, then Ia. \texttt{a} or \texttt{b} uses only one &
+auto \\
+Ib saturation (V) & Above this, Ib counts as saturated & 10 \\
+Ia saturation (V) & Above this, the contact conducts more than the
+amplifier can measure and the sample gets the saturated G & 10.4 \\
+switch to Ib below log G & Optional: only use Ib below this log(G/$G_0$)
+& off \\
+bias / bias channel & \texttt{measured} takes the bias channel as an
+array (\texttt{auto} = \texttt{M\_\allowbreak{}E1-E2} if it exists,
+otherwise \texttt{M\_\allowbreak{}E\textless{}module\textgreater{}}, or
+type a name) and the fixed bias isn't used; \texttt{fixed} uses the
+fixed bias. Without a bias channel the fixed bias is used & measured,
+auto \\
+series R compensation / series R & Corrects for the current-limiting
+resistor, G = I / (E - I x R). Empty R = value from the Setup group &
+on, from file \\
+saturated G ($G_0$) & What saturated samples are set to & 100 \\
+piezo scale (nm/V) & Piezo voltage to elongation; empty = the channel's
+\texttt{scale\_\allowbreak{}factor} & from file \\
+bias / current / conductance filter & none, Savitzky-Golay, median or
+moving average. The window is 2 x side points + 1. Can work on log
+values & bias: moving average, 25 points \\
+\end{longtable}
+
+\hypertarget{what-happens-in-the-conversion}{%
+\subsection{3.4 What happens in the
+conversion}\label{what-happens-in-the-conversion}}
+
+The current is calibrated and, for a dual-stage amplifier, the two gain
+channels are put together (Ib where it isn't saturated, Ia elsewhere).
+The conductance is the current divided by the voltage that's actually
+across the junction, i.e.~the bias minus what drops over the series
+resistor:
+
+\[
+G = \frac{I}{E - I R} \cdot \frac{1}{G_0}, \qquad G_0 = \frac{2e^2}{h} = 7.748 \times 10^{-5}\ \mathrm{S}
+\]
+
+If the file has a conductance channel and you choose it, none of this is
+done: G comes straight from the channel and only the piezo and bias are
+read. If the resistor takes the whole bias (E - I x R \textless= 0), or
+the low-gain amplifier saturates, the junction is in contact and beyond
+what can be measured, so the sample is set to the saturated G.
+
+The \texttt{.\allowbreak{}cvr} file contains the back-calculated
+current, I\_bc = G x $G_0$ x E, which is the current you'd get without
+the series resistor. When a \texttt{.\allowbreak{}cvr} is loaded, G is
+calculated back as I\_bc / bias / $G_0$, so the bias in the column
+settings has to be right.
+
+About the diode calibration: \texttt{Calibration\_\allowbreak{}M\#}
+holds five polynomials (PH, PL, M, NL, NH, coefficients in ascending
+order), an offset and two thresholds. With u = V - offset, the middle
+polynomial gives I directly when \textbar u\textbar{} is below the low
+threshold; outside that, the low or high polynomial gives log10
+\textbar I\textbar, and negative u uses the negative-side polynomials
+with a minus sign. I haven't checked this against a measurement with
+module 2 yet, so test it with a known resistor before trusting it.
+
+\hypertarget{data-traces-tab}{%
+\section{4. Data \& Traces tab}\label{data-traces-tab}}
+
+Here the recordings are loaded and cut into single breaking traces
+(making traces too, if you want them). All the other tabs only see the
+traces that are accepted here.
+
+\hypertarget{loading}{%
+\subsection{4.1 Loading}\label{loading}}
+
+Load files takes one or several files, Load folder takes every
+\texttt{.\allowbreak{}tdms}, \texttt{.\allowbreak{}cvr},
+\texttt{.\allowbreak{}txt}, \texttt{.\allowbreak{}csv},
+\texttt{.\allowbreak{}dat}, \texttt{.\allowbreak{}tsv},
+\texttt{.\allowbreak{}pxp} and \texttt{.\allowbreak{}ibw} in a folder.
+Everything you load is analysed together. TDMS files are converted with
+the settings from the Convert tab (3.3), text files with the column
+settings below. Remove drops the selected recordings and their traces,
+Clear drops everything. Show columns lists the columns (or Igor waves)
+of a file with their numbers and lengths, so you know what to type into
+the column settings. The tooltip of a loaded recording says which
+quantities came from the file and which were calculated. The list shows
+how long each recording is and whether it has a piezo signal; click one
+to see it in the overview plot.
+
+\hypertarget{column-settings-text-.cvr-and-igor-files}{%
+\subsection{4.2 Column settings (text, .cvr and Igor
+files)}\label{column-settings-text-.cvr-and-igor-files}}
+
+A column is given by its number (0 is the first) or by its name: the
+header of a text file or the wave name in an Igor file. Empty means the
+file doesn't have it.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2752}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.5262}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1685}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+conductance column & G given directly. If set, G is read from it and not
+calculated & empty \\
+conductance unit & \texttt{G/\allowbreak{}G0}, \texttt{S} or
+\texttt{log G/\allowbreak{}G0} & G/$G_0$ \\
+current amplifier & \texttt{single stage}: one current column.
+\texttt{dual stage}: Ia and Ib, merged & single stage \\
+current Ia column & The current (single stage) or the low-gain stage Ia
+(dual stage) & 0 \\
+current Ib column & The high-gain stage Ib (dual stage only) & empty \\
+Ia scale / Ib scale (A per unit) & Turns the column into A: 1 if it is
+in A, the amplifier gain in A/V if it is in V & 1 \\
+Ib saturated from \textbar Ib\textbar{} & Column value from which Ib
+counts as saturated and Ia is used instead; empty = 99.5 \% of the
+largest \textbar Ib\textbar{} in the file & empty \\
+Ia saturated from \textbar Ia\textbar{} & Column value from which the
+contact is beyond the range, G = saturated G & off \\
+use Ib below log G & Optional: only use Ib below this log(G/$G_0$) &
+off \\
+voltage column & Measured bias in V. Replaces the constant bias, and I-V
+analysis needs it & empty \\
+constant bias (V) & Only used without a voltage column. For
+\texttt{.\allowbreak{}cvr} files this must be the bias of the
+measurement & 0.1 \\
+series R (ohm) & Series resistor, G = I / (V - I x R) / $G_0$ & 0 \\
+saturated G ($G_0$) & What saturated samples are set to & 100 \\
+piezo / distance column & Piezo position or distance; empty if there is
+none (then distance = point number x piezo rate, 4.5) & 1 \\
+piezo scale (to nm) & Factor that turns the piezo column into nm & 1 \\
+time column (s) & If there is one, the sampling rate is taken from it &
+empty \\
+sampling rate (Hz) & Used when neither a time column nor the Igor x
+scaling gives it & 10000 \\
+\end{longtable}
+
+What is calculated depends on what you give:
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2984}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2984}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3733}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Columns given
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Conductance
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Current
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+conductance (+ current) & from the file & from the file, or G x $G_0$ x
+V \\
+Ia (single stage) & I / (V - I R) / $G_0$ & Ia \\
+Ia and Ib (dual stage) & from the merged current & Ib where not
+saturated, Ia elsewhere \\
+\end{longtable}
+
+V is the voltage column if there is one, otherwise the constant bias.
+
+Files with one wave or column per trace (common in Igor): put a
+\texttt{*} in the conductance or Ia column,
+e.g.~\texttt{G\_\allowbreak{}*}. Every matching column becomes its own
+recording. Other columns with a \texttt{*} are paired by the same text,
+so with piezo column \texttt{Z\_\allowbreak{}*} the wave
+\texttt{G\_\allowbreak{}12} gets \texttt{Z\_\allowbreak{}12}. Columns of
+different length (Igor waves) are cut to the shortest one.
+
+Header lines are skipped, and tab, comma, semicolon or space as
+separator all work.
+
+\hypertarget{how-the-traces-are-found}{%
+\subsection{4.3 How the traces are
+found}\label{how-the-traces-are-found}}
+
+With a piezo signal (\texttt{segmentation = piezo}) the piezo is
+smoothed and its speed calculated. Each point is then either moving
+forward, moving back, or held, which means the speed is below \emph{hold
+if speed below (fraction)} times the typical speed. Very short pieces
+(below \emph{min segment}) are merged with their neighbours. Every
+moving piece is a candidate trace and every held piece is a hold.
+
+A moving piece counts as breaking if the conductance drops by more than
+a decade from start to end, and as making if it rises. If you'd rather
+decide by piezo direction, set \emph{breaking direction} to
+\texttt{piezo+} or \texttt{piezo-}.
+
+A lot of measurements stop the piezo in the middle of a pull to record
+G(t) for the noise analysis. With \emph{join pull-hold-pull} switched on
+(default) the pulls before and after the stop are joined into one trace,
+but the hold points themselves are left out, otherwise the time spent
+standing still would show up as a fake peak in the histogram. The hold
+is kept separately for the noise tab (9).
+
+Without a piezo signal (\texttt{segmentation = threshold}) the contacts
+are found where log G goes above the high limit, and each gap between
+two contacts is split at its lowest point into a breaking and a making
+trace.
+
+\hypertarget{cutting-limits-and-checks}{%
+\subsection{4.4 Cutting limits and
+checks}\label{cutting-limits-and-checks}}
+
+All limits are log10(G/$G_0$). Making traces are turned around and cut
+the same way, so every trace goes from contact to tunnelling.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2465}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.5275}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1959}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+high limit to check & The trace has to get above this (metal contact),
+otherwise it's rejected & 0 \\
+low limit to check & The trace has to get below this, otherwise it's
+rejected & -4.5 \\
+start at & The cut trace starts at the last point above this; empty =
+the high limit & empty \\
+low limit to cut & The trace ends at the first point below this after
+the contact \ldots{} & -5.0 \\
+additional length & \ldots{} plus this many points & 100 \\
+reject noisy start & Throws out traces whose first \emph{noise points}
+scatter more than \emph{noise limit} (std of log G) & off, 25, 0.2 \\
+max floor noise & Optional, throws out traces whose last points are
+noisier than this & off \\
+use traces & \texttt{break}, \texttt{make} or \texttt{both} & break \\
+\end{longtable}
+
+I usually put the low limits about half a decade above the noise floor.
+You can see the floor in the overview plot as the flat band at the
+bottom.
+
+\hypertarget{distance-axis}{%
+\subsection{4.5 Distance axis}\label{distance-axis}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2618}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.5450}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1633}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+distance from & \texttt{piezo} uses the smoothed piezo signal,
+\texttt{index} uses point number x piezo rate & piezo \\
+displacement ratio & Junction displacement per nm of piezo (the MCBJ
+attenuation factor; 1 for STM) & 1 \\
+piezo rate & nm per point, for \texttt{index} and for files without
+piezo & 0.001 \\
+zero set & Distance zero is where the trace first drops below this log G
+(-0.3 is 0.5 $G_0$) & -0.3 \\
+piezo smoothing & Smoothing window for direction detection and the
+distance axis & 10 ms \\
+\end{longtable}
+
+The piezo has to be smoothed because in my files its noise (about 0.003
+nm per sample) is as big as the step between samples. For an MCBJ the
+displacement ratio can be calibrated with the tunnelling fit in the
+Plateau length tab (6.3).
+
+\hypertarget{overview-and-trace-browser}{%
+\subsection{4.6 Overview and trace
+browser}\label{overview-and-trace-browser}}
+
+The overview plot shows log G against time for the selected recording,
+with the piezo on the right axis. Breaking traces are shaded red, making
+traces blue and holds grey; light shading means rejected.
+
+Below it, the trace browser shows one trace against distance with its
+own histogram next to it. The line above the plot gives the trace
+number, type, file, length and whether it's accepted (and if not, why).
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.3920}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5780}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Key / button
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+What it does
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Left / Right arrow, \textless{} \textgreater{} & Previous / next
+trace \\
+G, Good & Mark as good and go to the next one \\
+B, Bad & Mark as bad and go to the next one \\
+Auto & Go back to the automatic decision \\
+Accepted only & Only browse accepted traces \\
+Overlay & Plot N random accepted traces on top of each other \\
+\end{longtable}
+
+Manual marks are kept until you detect the traces again.
+
+\hypertarget{histograms-tab}{%
+\section{5. Histograms tab}\label{histograms-tab}}
+
+The 1D histogram of log(G/$G_0$) over all accepted traces is where the
+molecular conductance shows up as a peak. The 2D histogram (log G
+against distance) shows how far junctions get stretched at each
+conductance. Both are redrawn automatically whenever the traces change.
+
+\hypertarget{settings}{%
+\subsection{5.1 Settings}\label{settings}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2572}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.5336}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1791}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+traces & All accepted traces, or one cluster from the Clustering tab &
+all \\
+log G min / max & Conductance range of both histograms & -6.5 / 1 \\
+bins / decade & Conductance resolution & 100 \\
+distance min / max, distance bins & Range and resolution of the 2D
+histogram & -0.5 / 2 nm, 200 \\
+normalization & \texttt{per trace} divides by the number of traces, so
+different data sets can be compared. \texttt{counts} is raw counts,
+\texttt{density} has area 1 & per trace \\
+2D colormap, colour max & Colour scale of the 2D histogram. The top of
+the scale is a percentile of the filled bins, so a few very full bins
+don't wash everything out & viridis, 99.5 \\
+overlay clusters in 1D & If there are clusters and \emph{all} is
+selected, each cluster's histogram is drawn too, scaled by its share of
+the traces & on \\
+\end{longtable}
+
+\hypertarget{fitting-the-peak}{%
+\subsection{5.2 Fitting the peak}\label{fitting-the-peak}}
+
+Set \emph{fit from} and \emph{fit to} around the peak (keep away from
+the $G_0$ peak and the noise floor), choose the number of Gaussians and
+whether you want a constant baseline, and click Fit peaks. The fit is a
+sum of Gaussians in log G plus the optional constant:
+
+\[
+N(x) = c + \sum_k A_k \exp\left(-\frac{(x - \mu_k)^2}{2\sigma_k^2}\right), \qquad x = \log_{10}(G/G_0)
+\]
+
+The starting values are the highest maxima in the range. For every peak
+you get the centre with its error, the conductance G = $10^{\mu}$ in
+$G_0$, the width $\sigma$ and the FWHM (2.355 $\sigma$) in decades. The
+fit is drawn in red with the conductance written next to each peak.
+
+For every peak the text also gives the \textbf{dwell time}: how long, on
+average, a trace spends in that conductance state. It comes from the
+area under the fitted peak (Rashid et al.~2025, SI 2.7):
+
+\[
+\tau = \frac{A}{w} \cdot \frac{1000}{f_s}\ \mathrm{ms}, \qquad A = a\,\sigma\sqrt{2\pi}
+\]
+
+A is the area of the Gaussian (amplitude a, width $\sigma$) in the
+per-trace histogram, w the bin width and f\_s the sampling rate, so A/w
+is the number of samples per trace inside the peak. It needs
+\emph{normalization} \texttt{per trace} or \texttt{counts}. On simulated
+data with 70 \% molecular traces, 0.4 nm plateaus and 2 nm/s pulling,
+the expected value is 0.7 x 0.2 s = 140 ms, and the fit gives 135-146
+ms.
+
+The program remembers the last fit; the Flicker noise tab uses it for
+the peak window (9.3).
+
+If a peak has a shoulder or a long tail, two Gaussians usually describe
+it better than forcing one. And when you compare samples, compare the
+per-trace histograms, not raw counts.
+
+\hypertarget{plateau-length-and-junction-statistics}{%
+\section{6. Plateau length and junction
+statistics}\label{plateau-length-and-junction-statistics}}
+
+This chapter covers two tabs: Plateau length (6.1-6.3) and Junction
+statistics (6.4).
+
+The plateau length is how far a junction can be pulled while the
+molecule is still bridging the gap. Compared with the length of the
+molecule it tells you whether junctions break when the molecule is fully
+stretched. The tab measures it in up to three conductance windows and
+also fits the tunnelling decay, which I use to calibrate the distance.
+
+\hypertarget{settings-1}{%
+\subsection{6.1 Settings}\label{settings-1}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2965}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4727}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2007}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+traces & All accepted traces or one cluster & all \\
+window 1 from / to & Conductance window (log G), normally the peak +/-
+1-2 $\sigma$ & -4.5 / -2.5 \\
+window 2, window 3 & More windows, e.g.~for a second molecular state;
+empty = off & off \\
+length method & \texttt{span} or \texttt{count}, see below & span \\
+histogram max, bins & Range and resolution of the length histogram & 2
+nm, 60 \\
+ignore lengths below & Leaves traces without a plateau out of the
+statistics & 0 nm \\
+tunnelling fit from / to & log G range for the tunnelling fit (6.3) & -5
+/ -1 \\
+expected $\beta$ (1/nm) & Decay constant you expect, for the calibration
+in 6.3 & 20 \\
+\end{longtable}
+
+With \texttt{span}, the length runs from the first point below the upper
+limit to the last point above the lower limit, so short jumps out of the
+window don't make the plateau shorter. That's the usual stretching
+length. \texttt{count} multiplies the number of points inside the window
+by the distance step, so jumps out of the window are not counted.
+
+\hypertarget{results}{%
+\subsection{6.2 Results}\label{results}}
+
+There's one length histogram per window, and the table gives the number
+of traces, mean, median, standard deviation, skewness, kurtosis,
+geometric mean, min and max for each.
+
+Keep in mind that the real junction is longer than the measured length
+by the snap-back after the gold contact breaks, roughly 0.5 nm for gold.
+Add that before comparing with the molecule.
+
+\hypertarget{tunnelling-decay-and-distance-calibration}{%
+\subsection{6.3 Tunnelling decay and distance
+calibration}\label{tunnelling-decay-and-distance-calibration}}
+
+For every trace log G is fitted linearly against distance in the
+tunnelling range, which gives $\beta$ in G \textasciitilde{}
+exp(-$\beta$ z). The right plot is the $\beta$ histogram, the median is
+written under the table.
+
+For gold in vacuum $\beta$ is about 20 per nm (one decade of conductance
+per \textasciitilde0.1 nm), in solvents it's lower; put your value in
+\emph{expected beta}. The label then tells you what to multiply the
+\emph{displacement ratio} (4.5) by, measured $\beta$ / expected $\beta$.
+Change the ratio and detect the traces again.
+
+\hypertarget{junction-statistics-tab}{%
+\subsection{6.4 Junction statistics tab}\label{junction-statistics-tab}}
+
+The 1D histogram tells you where the molecular peak is, but not how many
+traces it came from. A peak built from 90 \% of the traces and one built
+from 10 \% can look the same once you normalise per trace. The Junction
+statistics tab looks at the traces one at a time and asks three
+questions: did a molecule bridge the gap, for how long, and at what
+conductance? From the answers you get the junction yield (the fraction
+of traces with a molecular plateau, Kamenetska et al.~2009). You also
+see whether the yield or the conductance changed while you were
+measuring.
+
+\textbf{How a plateau is found.} A trace ``forms a junction'' if it
+stays flat inside the molecular window for at least \emph{min plateau}.
+Flat means the local slope \textbar d log G / dz\textbar{} is below
+\emph{max slope}. I added the slope test because without it every trace
+counts. A pure tunnelling trace falls through a two-decade window in
+about 0.1-0.2 nm, and with the plain \texttt{span} length from 6.1 that
+already looks like a short plateau. Tunnelling drops by $\beta$ / ln 10
+decades per nm, so about 9 decades/nm for gold in vacuum and 4-5 in
+solvents. Molecular plateaus usually fall by well under one decade per
+nm. The default of 2 decades/nm sits between the two.
+
+The slope at each point is the change in log G between z - w/2 and z +
+w/2, divided by w, where w is \emph{slope over}. Points near the ends of
+a trace, where that interval doesn't fit, never count as flat.
+
+For each trace you get:
+
+\begin{itemize}
+\tightlist
+\item
+  the flat length: the summed distance of all flat points inside the
+  window,
+\item
+  the plateau conductance: the median log G of those flat points,
+\item
+  yes/no: does the flat length reach \emph{min plateau}?
+\end{itemize}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3164}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4588}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1948}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+traces & All accepted traces or one cluster & all \\
+molecular window from / to & log G range where you expect the molecule &
+-4.5 / -2.5 \\
+flat if slope below & Slope limit in decades/nm & 2 \\
+slope over & Distance over which the slope is measured & 0.05 nm \\
+junction if flat length above & Minimum flat length for a junction & 0.1
+nm \\
+traces per block & Consecutive traces grouped for the plots against
+trace number & 100 \\
+conductance bins & Bins of the plateau conductance histogram & 60 \\
+\end{longtable}
+
+Use peak from histogram fit sets the window to the fitted peak centre
++/- 3 $\sigma$ (fit the peak in the Histograms tab first). Then click
+Calculate.
+
+\textbf{Results.} The text under the button gives the number of traces
+with a plateau, the yield with its binomial standard error
+sqrt(p(1-p)/N), and the median plateau conductance and length. With at
+least three blocks it also gives the conductance drift in decades per
+1000 traces (a straight-line fit to the block medians) and the range of
+the block yields. The plots are:
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.2847}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.6853}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Plot
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+What it shows
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Plateau conductance histogram & One entry per junction: the median log G
+of its plateau. Narrower than the 1D histogram, because the tunnelling
+background is gone \\
+Conductance vs trace number & Every plateau conductance plus the median
+of each block. A slope means the junction changed during the run
+(electrode wear, solvent evaporating, the surface filling up) \\
+Yield vs trace number & Yield per block with error bars and the overall
+yield as a dashed line \\
+Flat plateau length histogram & Flat length of every trace, with the
+threshold marked. A clear gap near the threshold means the setting is
+sensible \\
+Length vs conductance & One point per junction. A tilt shows that
+longer-stretched junctions sit at another conductance, e.g.~two binding
+geometries \\
+\end{longtable}
+
+\textbf{Choosing the settings.} Look at the flat length histogram first.
+Tunnelling-only traces pile up near zero and molecular traces form a
+second hump. Put \emph{min plateau} in the dip between them. If there is
+no dip, the yield depends on your threshold and you should say which one
+you used. On simulated data (12) with 70 \% molecular traces I get 68.5
++/- 3.3 \%, and with 30 \% I get 29.0 +/- 3.2 \%.
+
+A note on the denominator: the yield is per accepted trace. Traces
+rejected in Data \& Traces (4.4) aren't counted, so loose or strict
+cutting limits change it. Report the yield together with the cutting
+limits.
+
+\hypertarget{correlation-tab}{%
+\section{7. Correlation tab}\label{correlation-tab}}
+
+The correlation map shows which conductance values tend to turn up in
+the same trace. That way you can see things the 1D histogram averages
+away, for example a molecule going through two binding geometries one
+after the other.
+
+For each trace r the program makes its own histogram N\_r(G) on a common
+set of bins, and then calculates the Pearson correlation between every
+pair of bins over all traces (Makk et al.~2012):
+
+\[
+C(G_i, G_j) = \frac{\langle \delta N_r(G_i)\, \delta N_r(G_j) \rangle_r}{\sqrt{\langle \delta N_r(G_i)^2 \rangle_r \langle \delta N_r(G_j)^2 \rangle_r}}, \qquad \delta N_r = N_r - \langle N_r \rangle_r
+\]
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2436}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.5484}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1779}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+traces & All accepted traces or one cluster & all \\
+log G min / max & Range of the map & -6 / 0.5 \\
+bins / decade & Coarser than in the histograms, so each trace puts
+enough counts in each bin & 20 \\
+colour limit & Colour scale goes from minus to plus this & 0.3 \\
+colormap & Diverging scale, red positive and blue negative & RdBu\_r \\
+\end{longtable}
+
+Click Calculate. The diagonal is always 1, and the second plot is the
+mean per-trace histogram so you know where the peaks are.
+
+How to read it: a positive region off the diagonal at (G1, G2) means
+traces that stay long at G1 also stay long at G2, like two plateaus that
+come together. Negative means the two exclude each other, e.g.~two
+different binding geometries. Around zero there's no relation, and empty
+bins have no variance and stay blank.
+
+You need a few hundred traces. With fewer the map is mostly statistical
+noise (of the order of 1/sqrt(number of traces)).
+
+\hypertarget{clustering-tab}{%
+\section{8. Clustering tab}\label{clustering-tab}}
+
+Clustering sorts the traces into groups of similar shape without needing
+a reference trace, for example molecular traces vs.~pure tunnelling, or
+two binding geometries. Once the traces are clustered, the other tabs
+can work on one cluster at a time.
+
+\hypertarget{what-it-does}{%
+\subsection{8.1 What it does}\label{what-it-does}}
+
+Each accepted trace is first turned into a vector of fixed length. By
+default that's a small 2D histogram (distance x log G), flattened and
+normalised to sum 1, so traces of different length and sampling can be
+compared (same idea as Lemmer et al.~2016 and Cabosart et al.~2019).
+These vectors are centred and reduced with PCA, the clustering runs on
+the first components, and finally the clusters are numbered either by
+median conductance (highest first) or by size.
+
+\hypertarget{settings-2}{%
+\subsection{8.2 Settings}\label{settings-2}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2750}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4976}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1974}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+feature & \texttt{2D histogram} (what I'd use), \texttt{1D histogram}
+(log G only) or \texttt{resampled trace} (log G on a fixed distance
+grid) & 2D histogram \\
+log G min / max, log G bins & Conductance grid of the feature & -6 /
+0.5, 28 \\
+distance min / max, distance bins & Distance grid of the feature & -0.2
+/ 1.5 nm, 28 \\
+resample points & Grid size for \texttt{resampled trace} & 128 \\
+PCA components & How many components the clustering uses; 0 = raw
+features & 10 \\
+algorithm & see 8.3 & k-means \\
+number of clusters & k & 3 \\
+random seed & Keeps k-means, Gaussian mixture and spectral results the
+same from run to run & 0 \\
+order clusters by & \texttt{conductance} or \texttt{size} &
+conductance \\
+k range for scan & Which k the silhouette scan tries & 2, 8 \\
+\end{longtable}
+
+\hypertarget{which-algorithm}{%
+\subsection{8.3 Which algorithm}\label{which-algorithm}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2436}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4040}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3223}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Algorithm
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Good for
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Note
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+k-means & A first look, compact groups of similar size & Fast, assumes
+round clusters \\
+gaussian mixture & Groups with different spread or orientation &
+Elliptical clusters, slower \\
+agglomerative & Hierarchical structure & Ward linkage \\
+spectral & Long or curved groups & Gets slow above \textasciitilde5000
+traces \\
+\end{longtable}
+
+\hypertarget{running-it}{%
+\subsection{8.4 Running it}\label{running-it}}
+
+Run clustering uses the k you set; Run + scan k also computes the
+silhouette score for each k in the scan range. The plots are the scree
+plot, the PC1-PC2 scatter coloured by cluster, the 1D histogram of each
+cluster, the silhouette scan (only after Run + scan k) and a 2D
+histogram for every cluster. The text lists the size of each cluster and
+the silhouette score (-1 to 1, higher means better separated). Clear
+clusters removes the labels again.
+
+Don't just take the k with the highest silhouette score. With noisy data
+it often keeps going up with k. I take the smallest k where the cluster
+2D histograms clearly look different and make physical sense; typically
+that's one tunnelling cluster and one or more molecular ones.
+
+To use a cluster, pick \texttt{cluster N} in the \emph{traces} box of
+Histograms, Plateau length or Correlation. When you save results, the
+histograms of every cluster are written automatically. Detecting the
+traces again removes the clusters.
+
+\hypertarget{flicker-noise-tab}{%
+\section{9. Flicker noise tab}\label{flicker-noise-tab}}
+
+The flicker noise is used to tell through-bond transport from
+through-space tunnelling. The noise power NP goes with the mean
+conductance as NP \textasciitilde{} $G^{n}$. If n is close to 1, the
+coupling is through-bond and the current goes through the molecular
+orbitals. If n is close to 2, it's through-space: electrons tunnel
+directly between the electrodes, and since G \textasciitilde{}
+exp(-$\beta$ d), fluctuations of the gap give dG \textasciitilde{} G and
+so NP \textasciitilde{} $G^{2}$. Anything in between is a mix.
+
+Two methods are implemented, the bell-shaped 2D histogram from Adak et
+al.~(2015) and the Theil-Sen method with a stationarity test from Morris
+et al.~(2025). They run on the same data and you always get both
+results.
+
+\hypertarget{what-data-you-need}{%
+\subsection{9.1 What data you need}\label{what-data-you-need}}
+
+The noise is measured on G(t) traces taken while the junction is held
+still. Typically you pull until you're on the molecular plateau, stop
+the piezo for 0.1-2 s, then carry on. The Data \& Traces tab finds these
+holds by itself (4.3), so detect the traces first.
+
+If your data has no holds, set \emph{segments} to
+\texttt{plateau windows}; then windows inside the breaking traces are
+used. These aren't as stationary as real holds, so be careful with the
+result.
+
+Morris et al.~found that n stops depending on the sampling rate above
+about 5 kHz for their 90 ms traces. Shorter holds probably need faster
+sampling.
+
+\hypertarget{noise-power}{%
+\subsection{9.2 Noise power}\label{noise-power}}
+
+Each analysis window is either a whole hold (after trimming) or a
+fixed-length piece of one. The first and last few milliseconds are cut
+off (\emph{trim start}, \emph{trim end}) because the junction is still
+relaxing right after the piezo stops. Then the PSD of G (in $G_0$) is
+calculated, with Welch's method or as a periodogram. The mean of the
+trace is subtracted first (\emph{detrend} \texttt{constant}); if you
+don't, a trace with a step in it gives a fake 1/$f^{2}$ spectrum.
+Finally the PSD is integrated over the band from \emph{integrate from}
+to \emph{integrate to}:
+
+\[
+NP = \int_{f_1}^{f_2} S_G(f)\, df \qquad [G_0^2], \qquad f_1 = 100\ \mathrm{Hz},\ f_2 = 1000\ \mathrm{Hz}
+\]
+
+100-1000 Hz is the usual choice: below that there's mechanical noise,
+above it amplifier noise. Whatever you choose, keep it the same for all
+molecules you want to compare.
+
+\hypertarget{which-windows-are-kept}{%
+\subsection{9.3 Which windows are kept}\label{which-windows-are-kept}}
+
+The checks below are done in this order, and every rejected window is
+counted under its reason in the result text.
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Conductance range: the mean log G of the window has to be between
+  \emph{accept log G from} and \emph{to}. This removes the noise floor
+  and gold contacts.
+\item
+  Peak window: if \emph{peak centre} and \emph{peak sigma} are set, the
+  mean conductance of the first and the last \emph{end fraction} (5 \%)
+  of the window (or the first and last \emph{end points} points, if that
+  is above 0) both have to be within centre +/- \emph{n sigma} x
+  $\sigma$ (default 2). That way only junctions that stay on the
+  molecular plateau are used. Peak from histogram fit copies centre and
+  $\sigma$ from the last fit in the Histograms tab. If you publish, say
+  which n $\sigma$ you used.
+\item
+  Kurtosis (optional): throws out windows with too high excess kurtosis,
+  i.e.~with switching or spikes.
+\item
+  Drift (optional): throws out windows where the averaged log G at the
+  start and at the end differ by more than the limit.
+\item
+  Stationarity (optional, on in the Morris preset): Augmented
+  Dickey-Fuller test on log10\textbar G\textbar{} with a constant term,
+  maximum lag ceil(12 (N/100)\^{}(1/4)) and the lag chosen by AIC. The
+  window is kept if p \textless= \emph{ADF significance} (0.05), i.e.~if
+  the unit-root hypothesis is rejected. I checked my implementation
+  against statsmodels and it gives the same statistic, lag and p-value.
+\end{enumerate}
+
+With \emph{subtract instrument floor} on, the mean PSD of the windows
+below \emph{floor = windows below log G} is integrated over the same
+band and subtracted from every NP.
+
+\hypertarget{how-n-is-determined}{%
+\subsection{9.4 How n is determined}\label{how-n-is-determined}}
+
+All three estimators are always calculated. \emph{estimator for n} only
+decides which one is used for the bell plot and the interpretation text.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1568}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4997}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3136}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Estimator
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+How
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Comment
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Theil-Sen (default) & Median of the slopes between all pairs of points
+in log NP vs log G, which is the same as the n where Kendall's $\tau$ of
+(log G, log NP/$G^{n}$) is zero. Error from Sen's 95 \% confidence
+interval & Up to 29 \% outliers don't change it. This is what Morris et
+al.~recommend \\
+OLS & Least-squares slope of log NP vs log G, the same as the n where
+the Pearson correlation is zero & Sensitive to outliers and long tails,
+tends to give n too high \\
+2D Gaussian & n where the fitted 2D Gaussian (the bell) of
+log(NP/$G^{n}$) vs log G has zero correlation & The graphical method of
+Adak et al.~2015 \\
+\end{longtable}
+
+The OLS error is also checked with a bootstrap (\emph{bootstrap
+samples}). If there are more than 6000 windows, Theil-Sen uses a random
+6000 of them, otherwise it gets slow.
+
+\hypertarget{presets}{%
+\subsection{9.5 Presets}\label{presets}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.2494}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.7206}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Preset
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+What it sets
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Morris et al.~2025 (ADF + Theil-Sen) & 5 ms trimmed at both ends, one
+window per hold, mean-subtracted one-sided periodogram (rectangular
+window), 100-1000 Hz, ADF with $\alpha$ 0.05, ends within +/- 2 $\sigma$
+of the peak, no drift or kurtosis cut, Theil-Sen \\
+Adak et al.~2015 (2D Gaussian bell) & 100 ms windows, Welch PSD,
+100-1000 Hz, 2D Gaussian estimator \\
+Rashid et al.~2025 (Pearson r scan) & First 10 ms of each hold dropped,
+the rest is one window; first and last 100 points within +/- 1 $\sigma$
+of the peak; DFT squared (periodogram) integrated 100-1000 Hz; no ADF,
+drift or kurtosis cut; n where the Pearson r of log(NP/$G^{n}$) and log
+G is smallest, scanned 0.3-2.3 in steps of 0.01 (the OLS estimator) \\
+\end{longtable}
+
+The presets don't touch your conductance range. After the Morris preset,
+press Peak from histogram fit so the peak window is set.
+
+\hypertarget{plots}{%
+\subsection{9.6 Plots}\label{plots}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.2465}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.7235}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Where
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+What
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Top left & The segment chosen in \emph{show segment}, accepted windows
+green, rejected red \\
+Top middle & Mean PSD of the accepted windows, the floor PSD, the
+integration band and a 1/$f^{\alpha}$ fit \\
+Top right & log NP vs log G with the OLS and Theil-Sen lines \\
+Bottom left & The bell: 2D histogram of log(NP/$G^{n}$) vs log G at the
+chosen n, with the fitted Gaussian as contours \\
+Bottom middle & Pearson r, Kendall $\tau$ and the 2D Gaussian
+correlation against n; each estimator is where its curve crosses zero \\
+Bottom right & Residuals of the OLS and Theil-Sen fits; long tails mean
+outliers \\
+\end{longtable}
+
+\hypertarget{what-to-report}{%
+\subsection{9.7 What to report}\label{what-to-report}}
+
+n with its error, which estimator, how many traces were accepted, the
+frequency band, the trimming, the n $\sigma$ window and whether the ADF
+test was on. All of this is in
+\texttt{*\_\allowbreak{}Noise\_\allowbreak{}summary.\allowbreak{}txt}
+(13). If OLS and Theil-Sen differ by more than their errors there are
+outliers in the data; I'd trust Theil-Sen and have a look at the
+residual plot.
+
+As a check I ran it on simulated data with n = 1.5 and got n\_TSE = 1.52
++/- 0.02. After adding 5 \% outlier windows, Theil-Sen gave 1.40 and OLS
+1.33.
+
+The Rashid et al.~2025 preset was checked on five simulated data sets
+with 160 ms holds on the plateau (n = 1.5): it accepted 55-73 holds each
+and gave n = 1.53 on average (Morris preset on the same data: 1.59). The
+text also gives \emph{minimum \textbar Pearson r\textbar{} on the scan
+grid}, which is how the paper reads n off the scan; it equals the OLS n
+to within the grid step.
+
+\hypertarget{events-tab-flickering-and-mechanical-switching}{%
+\subsection{9.8 Events tab: flickering and mechanical
+switching}\label{events-tab-flickering-and-mechanical-switching}}
+
+A junction that switches between two states during a trace shows up as
+steps in G(t): short back-and-forth steps (flickering) or one large
+jump, for example when stretching converts one isomer into the other (a
+mechanical event). The Events tab finds these steps the way Rashid et
+al.~(2025, SI 2.6) did:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  G(t), in $G_0$, goes through a Butterworth low-pass (200 Hz, order 2)
+  and then a Savitzky-Golay filter (order 20, 20 side points, so 41
+  points). This removes the noise that would otherwise give false steps.
+\item
+  The filtered trace is differentiated with the second-order central
+  difference, dG/dt = (G{[}i+1{]} - G{[}i-1{]}) / (2 dt).
+\item
+  Peaks of the derivative above a threshold are events: above the
+  \emph{mechanical threshold} (0.002) a mechanical event, between the
+  \emph{flicker threshold} (0.0007) and that a flicker.
+\item
+  Events where the junction is outside the molecular range (\emph{valid
+  from / to log G}: metal contact, noise floor) are false positives and
+  are dropped.
+\end{enumerate}
+
+Each trace is then \emph{mechanical} (at least one mechanical event),
+\emph{flickering} (flickers only) or \emph{quiet}.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3261}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4314}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2126}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+segments & \texttt{traces} (accepted breaking traces, against time) or
+\texttt{holds} & traces \\
+low-pass, order & Butterworth filter (applied forwards and backwards, so
+no time shift) & 200 Hz, 2 \\
+Savitzky-Golay side points, order & Smoothing after the low-pass & 20,
+20 \\
+derivative dt (s) & dt in the derivative; the thresholds are on this
+scale & 0.02 \\
+peak width, peak detection & See below & 50, quadratic fit \\
+count & \texttt{rises}, \texttt{drops} or \texttt{both} & rises \\
+flicker / mechanical threshold & Thresholds on dG/dt & 0.0007 / 0.002 \\
+valid from / to log G & Molecular range & -6.5 / -1 \\
+level before/after (ms) & The conductance before and after an event is
+the median over this time & 20 \\
+hold histogram: time bins, bins / decade & For the conductance-time
+histogram of the holds & 200, 30 \\
+\end{longtable}
+
+Three details of the original LabVIEW code aren't written in the paper,
+so I chose what LabVIEW does by default. Check them against your own
+settings:
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{dt.} LabVIEW's derivative takes dt as an input. With dt = 20
+  ms and 10 kHz data, the peak of dG/dt is about 2.2 times the step
+  height (measured on synthetic steps), so the thresholds of 0.0007 and
+  0.002 correspond to steps of about 3 x $10^{-4}$ and 9 x $10^{-4}$
+  $G_0$.
+\item
+  \textbf{Peak width.} LabVIEW's Peak Detector fits a quadratic over
+  \emph{width} points (50) and compares the fitted maximum with the
+  threshold. That is \emph{peak detection} = \texttt{quadratic fit}.
+  \texttt{minimum width} instead keeps only peaks at least \emph{width}
+  samples wide at half height. Note that a 200 Hz low-pass makes
+  derivative peaks only about 20-30 samples wide at 10 kHz, so
+  \texttt{minimum width} with 50 rejects almost everything.
+\item
+  \textbf{Polarity.} The Peak Detector finds maxima only, so
+  \emph{count} = \texttt{rises}. A flicker up and back down is then
+  counted once. Use \texttt{both} to count every step.
+\end{itemize}
+
+scipy's own Savitzky-Golay coefficients fall apart at order 20 (they
+come out around $10^{-17}$), so the program builds the filter from a QR
+decomposition in the Legendre basis instead. It matches scipy to
+$10^{-14}$ at low order and stays exact at order 20.
+
+\textbf{Plots.} One example trace with the filtered signal and the
+events marked, its derivative with both thresholds, the share of quiet,
+flickering and mechanical traces, flickers per trace, and a transition
+map (log G before against log G after each event). With \texttt{holds}
+you also get the 2D conductance-time histogram of all holds, with the
+most probable log G at every time (a Gaussian fit per time bin) and its
+$\sigma$ as error bars. That is the plot the paper uses for the
+mechanical modulation (Fig. S23): hold, modulate the piezo with a square
+wave, and see how the most probable conductance follows.
+
+On synthetic traces a 4 x $10^{-4}$ $G_0$ flicker at G \textasciitilde{}
+$10^{-3}$ $G_0$ is found as a flicker, a jump from $10^{-6}$ to 1.6 x
+$10^{-3}$ $G_0$ as a mechanical event, and a flat trace with 3 \% noise
+gives nothing.
+
+\hypertarget{i-v-and-egain-tabs}{%
+\section{10. I-V and EGaIn tabs}\label{i-v-and-egain-tabs}}
+
+This tab is for bias sweeps. It cuts a recording into forward and
+backward I-V curves, makes histograms of them and, if you want, fits a
+transport model to them (10.2, 10.3).
+
+\hypertarget{finding-the-sweeps}{%
+\subsection{10.1 Finding the sweeps}\label{finding-the-sweeps}}
+
+This first part cuts the recording into forward and backward curves and
+makes histograms of them. For that the bias has to be recorded over
+time, so you need a TDMS file with a bias channel or a text or Igor file
+with a \emph{voltage column} (4.2). With constant bias you just get ``No
+bias sweeps were found''.
+
+The bias is smoothed and its turning points found (peaks and valleys at
+least \emph{min sweep amplitude} apart). Every monotonic piece between
+two turning points is one curve, forward if the bias goes up and
+backward if it goes down. The current of each curve is smoothed with a
+Savitzky-Golay filter and dI/dV is the ratio of the filtered derivatives
+of I and V.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3489}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4518}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1693}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+file & Which recording & first \\
+min sweep amplitude (V) & Smallest bias swing that counts as a sweep &
+0.05 \\
+smoothing points, polynomial order & Savitzky-Golay window and order for
+the current and dI/dV & 11, 2 \\
+curve must reach V below / above & Only keeps curves that cover this
+range; empty = off & off \\
+V bins, I bins & Resolution of the 2D histograms & 100, 100 \\
+log \textbar I\textbar{} histogram & Histograms log10
+\textbar I\textbar{} instead of I & on \\
+\end{longtable}
+
+Top left you see up to 200 curves (forward blue, backward orange) with
+the averaged forward and backward curves. The other three plots are 2D
+histograms against V of log I, of log(G/$G_0$) with G = I/V, and of
+log(dI/dV / $G_0$). The curves are saved as V/I column pairs in
+\texttt{IV\_\allowbreak{}DATA/\allowbreak{}IV\_\allowbreak{}Curves\_\allowbreak{}F.\allowbreak{}txt}
+and \texttt{IV\_\allowbreak{}Curves\_\allowbreak{}B.\allowbreak{}txt}
+(13).
+
+The mean curves only use sweeps that cover the typical bias range. The
+half sweeps at the start and end of a recording are left out of the
+average, because they'd shrink the common range to nothing. They are
+still in the histograms and in the fits of single curves.
+
+\hypertarget{single-level-model}{%
+\subsection{10.2 Single-level model}\label{single-level-model}}
+
+Most I-V curves of single-molecule junctions can be described by one
+molecular level. It sits at energy $\varepsilon_0$ from the Fermi level
+of the electrodes and is broadened by its coupling $\Gamma$ to each
+electrode. The transmission is a Lorentzian, and at zero temperature the
+Landauer current has a closed form:
+
+\[
+I(V) = N\,G_0\,\Gamma \left[\arctan\frac{V/2 - \varepsilon(V)}{\Gamma} + \arctan\frac{V/2 + \varepsilon(V)}{\Gamma}\right], \qquad \varepsilon(V) = \varepsilon_0 + a V
+\]
+
+Energies are in eV and V in volts, so $G_0$ times an energy in eV is
+directly a current in A. Both electrodes are coupled equally ($\Gamma_L$
+= $\Gamma_R$ = $\Gamma$), N is the number of molecules in parallel (keep
+it 1) and a describes an asymmetric junction where the level moves with
+the bias. At low bias the model gives G/$G_0$ = N $\Gamma^2$ /
+($\varepsilon_0^2$ + $\Gamma^2$). This is the form used, for example, by
+Zotti et al.~(2010) to compare anchoring groups.
+
+\textbf{Finite temperature.} Above 0 K the Fermi functions of the leads
+smear the edges of the bias window. The general Landauer form is
+
+\[
+I = \frac{2e}{h}\int dE\, T(E)\,[f_L(E) - f_R(E)], \qquad T(E) = \frac{\Gamma^2}{(E - \varepsilon)^2 + \Gamma^2}
+\]
+
+with f\_L and f\_R the Fermi functions at $\mu$ = +V/2 and -V/2. This
+T(E) is the same as 2 $\pi$ $\Gamma_L$ $\Gamma_R$ D(E) /
+$\Gamma_\mathrm{tot}$, with a Lorentzian density of states D(E) of width
+$\Gamma_\mathrm{tot}$ = $\Gamma_L$ + $\Gamma_R$, as written in Rashid et
+al.~(2025). $\Gamma$ here is $\Gamma_{L,R}$, the number in their Table
+S1. The program can do the integral in two ways:
+
+\begin{itemize}
+\tightlist
+\item
+  \texttt{analytic}: the integral of the Lorentzian against a Fermi
+  function has a closed form with the digamma function psi (formula
+  below). It is exact and fast.
+\item
+  \texttt{energy grid}: the integral done numerically on an energy grid,
+  as in Rashid et al.~(2025, SI 2.4): -10 to 10 eV in steps of 0.02 meV.
+  To keep this fast, T(E) is integrated once and the Fermi functions
+  enter by one convolution (FFT) per evaluation.
+\end{itemize}
+
+The closed form used by \texttt{analytic}:
+
+\[
+\int T(E)\, f(E - \mu)\, dE = \pi\Gamma \left[\frac{1}{2} - \frac{1}{\pi}\, \mathrm{Im}\, \psi\!\left(\frac{1}{2} + \frac{\Gamma - i(\mu - \varepsilon)}{2\pi k_B T}\right)\right]
+\]
+
+The two agree to better than $10^{-9}$ (checked at 0 and 300 K,
+$\varepsilon_0$ = 1.1 eV, $\Gamma$ = 11.3 meV). The single curves are
+always fitted with the closed form. \texttt{energy grid} is used for the
+mean and most probable curves, starting from the closed-form result, so
+a grid fit takes under a second.
+
+\textbf{Most probable curve.} Besides the mean forward and backward
+curves, the program builds the most probable I-V curve. It bins all
+curves by bias, fits a Gaussian to the current distribution in every bin
+and takes its centre, with $\sigma$ as the error bar. This is the blue
+line in Fig. S22 of Rashid et al.~(2025), and it is less sensitive to a
+few odd curves than the mean. It is fitted too. \emph{weight by 1/sigma}
+weights each bias bin by its spread.
+
+\textbf{Preset: Rashid et al.~2025.} It sets 300 K, the energy grid (-10
+to 10 eV, 0.02 meV), the Levenberg-Marquardt algorithm, $\Gamma_L$ =
+$\Gamma_R$, no asymmetry and N = 1. The SI doesn't give the temperature,
+so 300 K is my assumption; change it if your measurement was at another
+one. On a model curve with the G1 values of their Table S1
+($\varepsilon_0$ = 1.10 eV, $\Gamma$ = 11.3 meV, 300 K) the preset gives
+back 1.100 eV and 11.30 meV.
+
+\textbf{Ensembles.} \emph{fit N too} lets the number of molecules float,
+for large-area junctions (the EGaIn tab uses it). N and $\Gamma$ are
+strongly correlated then: on a model curve with N = $10^{4}$ and
+$\Gamma$ = 50 meV the fit gives N = 8.6 x $10^{3}$ and $\Gamma$ = 54
+meV, while $\varepsilon_0$ comes back to 0.1 \%. Report $\varepsilon_0$
+and treat N and $\Gamma$ with care.
+
+Click Fit single-level model + TVS after Analyse I-V. The fit is a
+least-squares fit of I (scaled by its maximum), started from four values
+of $\varepsilon_0$. The best one is kept. Every curve is fitted (up to
+\emph{fit at most N single curves}), and so are the mean forward and
+backward curves.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3288}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4027}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2385}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+fit only \textbar V\textbar{} below & Restricts the fit to low bias;
+empty = whole curve & empty \\
+fit asymmetry a & Also fits a; off means a = 0 (symmetric junction) &
+off \\
+molecules in parallel N & N in the formula & 1 \\
+TVS: ignore \textbar V\textbar{} below & See 10.3 & 0.05 V \\
+fit at most N single curves & Fitting takes a few ms per curve & 500 \\
+temperature (K) & 0 = zero-temperature closed form & 0 \\
+mean-curve integration & \texttt{analytic} or \texttt{energy grid} (see
+above) & analytic \\
+energy grid step, from, to & Grid of the numerical integral & 0.02 meV,
+-10, 10 eV \\
+fit algorithm & \texttt{trust region} (bounded) or
+\texttt{Levenberg-Marquardt} (unbounded) & trust region \\
+fit N too & Let N float (ensembles) & off \\
+most probable: bias bins, current bins & Binning for the most probable
+curve & 40, 100 \\
+weight by 1/$\sigma$ & Weights for the most probable curve & off \\
+\end{longtable}
+
+Some things to keep in mind:
+
+\begin{itemize}
+\tightlist
+\item
+  $\varepsilon_0$ comes out as a positive number. The model can't tell
+  HOMO from LUMO transport, because both give the same I-V. For that you
+  need thermopower or theory.
+\item
+  When the bias range is well below $\varepsilon_0$, the curve is almost
+  linear plus a small cubic term. $\varepsilon_0$ and $\Gamma$ are then
+  strongly correlated, and the errors (from the fit covariance) get
+  large. Look at the $\varepsilon_0$ vs $\Gamma$ scatter: a long
+  diagonal streak means the data can't separate the two.
+\item
+  The model assumes one level, and a level that doesn't depend on the
+  bias beyond a V. At \emph{temperature} 0 it also assumes
+  $\varepsilon_0$ and $\Gamma$ are much larger than kT (about 25 meV);
+  otherwise set the temperature. If those assumptions don't hold, the
+  model can still fit the curve nicely while $\varepsilon_0$ and
+  $\Gamma$ no longer mean what they seem to.
+\end{itemize}
+
+\hypertarget{transition-voltage-spectroscopy-tvs}{%
+\subsection{10.3 Transition voltage spectroscopy
+(TVS)}\label{transition-voltage-spectroscopy-tvs}}
+
+If you plot ln(|I|/$V^{2}$) against 1/V (a Fowler-Nordheim plot), I-V
+curves of molecular junctions have a minimum. Beebe et al.~(2006)
+introduced it as the transition voltage $V_t$. It is the same as the
+maximum of $V^{2}$/|I|. $V_t$ needs no fitting and is less sensitive to
+noise than the curvature of I(V), which is why it is so widely used.
+
+For each curve and each polarity the program averages I in 60 bias bins
+above \emph{TVS: ignore \textbar V\textbar{} below}, finds the maximum
+of $V^{2}$/|I| and refines it with a parabola through the three highest
+points. If the maximum is at the edge of the measured range, the bias
+didn't go far enough, and that $V_t$ is left empty.
+
+In the single-level model with $\Gamma$ \textless\textless{}
+$\varepsilon_0$, the two transition voltages give $\varepsilon_0$ and a
+in closed form (Baldea 2012):
+
+\[
+\varepsilon_0 = \frac{2\,|V_t^+ V_t^-|}{\sqrt{(V_t^+)^2 + (V_t^-)^2 + \frac{10}{3}|V_t^+ V_t^-|}}, \qquad a = \frac{(V_t^+ + V_t^-)\,\varepsilon_0}{4\,|V_t^+ V_t^-|}
+\]
+
+For a symmetric junction this reduces to $\varepsilon_0$ = (sqrt(3)/2)
+$V_t$, about 0.87 $V_t$. If only one polarity has a $V_t$, that formula
+is used. I checked both against the exact model: for $\varepsilon_0$ =
+0.8 eV, $\Gamma$ = 10 meV and a = 0.1, the curves give $V_t^{+}$ = 1.19
+V and $V_t^{-}$ = -0.75 V, and back $\varepsilon_0$ = 0.800 eV and a =
+0.100.
+
+Comparing the $\varepsilon_0$ from TVS with the $\varepsilon_0$ from the
+fit is a useful check. If they disagree a lot, the curves probably
+aren't single-level-like (several levels, strong asymmetry, or heating
+at high bias).
+
+\hypertarget{plots-and-what-to-report}{%
+\subsection{10.4 Plots and what to
+report}\label{plots-and-what-to-report}}
+
+The fit and TVS add five plots to the I-V tab:
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.3263}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.6437}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Plot
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+What it shows
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+SLM fit & Mean forward and backward curves (dots), the most probable
+curve with its $\sigma$, and the fitted model (lines) \\
+Fowler-Nordheim & ln(|I|/$V^{2}$) vs 1/V of the mean curves, positive
+bias solid and negative dashed, $V_t$ as dotted lines \\
+Transition voltage histogram & $V_t^{+}$ and |$V_t^{-}$| of all
+curves \\
+SLM parameters & $\varepsilon_0$ against $\Gamma$ (log scale) for every
+fitted curve \\
+$\varepsilon_0$ histogram & $\varepsilon_0$ from the fits and from
+$V_t$ \\
+\end{longtable}
+
+Report $\varepsilon_0$ and $\Gamma$ with their spread over the single
+curves (the medians are in the text). Say whether a was fitted and give
+the bias range of the fit. For TVS, give both polarities. The numbers
+per curve are in
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}models.\allowbreak{}txt},
+the most probable curve with its fit in
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}most\_\allowbreak{}probable.\allowbreak{}txt},
+and the summary in
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}models\_\allowbreak{}summary.\allowbreak{}txt}
+(13).
+
+\hypertarget{egain-ensemble-tab}{%
+\subsection{10.5 EGaIn (ensemble) tab}\label{egain-ensemble-tab}}
+
+Large-area junctions (EGaIn tips, CP-AFM, crossbars) measure many
+molecules at once and many junctions per sample. Their statistics differ
+from break junctions in one important way: the unit is the junction, not
+the sweep. A sample with 20 junctions and 20 sweeps each has 20
+independent measurements, not 400. The tab follows the statistics of
+Reus et al.~(2012), as implemented in GaussFit (Chiechi group) and in
+the EGaIn module of XMe (Hong group).
+
+\textbf{Loading.} Every file is one junction: a column with the bias and
+one with the current (or J). Add files \ldots{} or Add folder \ldots{}
+makes a \emph{data set}, normally one molecule or one sample. Enter a
+molecular length for each data set in the table (nm, angstrom or number
+of carbons, as long as all sets use the same unit) if you want $\beta$.
+Add simulated makes fake data sets with known answers.
+
+\textbf{What it does:}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  J = I / A, with A = $\pi$ $d^{2}$ / 4 from the contact diameter, or
+  the area you type in.
+\item
+  A junction whose \textbar J\textbar{} ever reaches the \emph{short
+  threshold} is a short. It counts against the yield (working junctions
+  / all junctions) and is left out.
+\item
+  The bias is cut into sweeps where it turns around, and every sweep is
+  put on a common bias grid (\emph{bias grid step}). 0 V is left out,
+  because log\textbar J\textbar{} is meaningless there.
+\item
+  At every bias, the log10\textbar J\textbar{} values of all sweeps are
+  histogrammed (\emph{bins / decade}) and fitted with a Gaussian. The
+  centre \textless log\textbar J\textbar\textgreater{} and width
+  $\sigma_\mathrm{log}$ are reported, as in Reus et al.
+\item
+  The confidence interval uses the number of working junctions $n_j$ as
+  degrees of freedom (formula below).
+\item
+  Rectification: sweeps are grouped into cycles that cover both
+  polarities, and log R = log\textbar J(+V)\textbar{} -
+  log\textbar J(-V)\textbar{} is histogrammed and fitted for every
+  \textbar V\textbar.
+\item
+  $V_\mathrm{trans}$ (10.3) for every cycle.
+\item
+  Optionally the single-level model (10.2) is fitted to the
+  Gaussian-mean J(V), with N free (molecules per cm$^2$ that carry the
+  current).
+\item
+  Fit $\beta$: with two or more analysed data sets with lengths, log10
+  \textless\textbar J\textbar\textgreater{} at \emph{report at bias} is
+  fitted against the length d (formula below). Each point is weighted by
+  the standard error of its mean, $\sigma_\mathrm{log}$ / sqrt($n_j$ -
+  1). With more than two sets, the error is scaled up by the scatter of
+  the points if that is larger. $\beta$ comes out per unit of the length
+  you typed (Simeone et al.~2013 report 0.92 per carbon for
+  alkanethiolates).
+\end{enumerate}
+
+The confidence interval (step 5) and the length dependence (step 9) are
+
+\[
+\mathrm{CI} = t_{1-\alpha/2,\; n_j - 1}\, \frac{\sigma_\mathrm{log}}{\sqrt{n_j - 1}}, \qquad \log_{10} |J| = \log_{10} J_0 - \frac{\beta\, d}{\ln 10}
+\]
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3667}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4049}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1984}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+bias column, current column & Column number (0 = first) or header name &
+0, 1 \\
+current unit & A, mA, uA, nA, or A/cm2 if the column is already J & A \\
+contact diameter (um), contact area (cm2) & Geometric contact; the area
+overrides the diameter & 25 um, empty \\
+short if \textbar J\textbar{} reaches (A/cm2) & Short threshold & 100 \\
+bias grid step (V) & Bias grid of the statistics & 0.05 \\
+log\textbar J\textbar{} bins / decade & Histogram resolution & 10 \\
+CI: $\alpha$ & Confidence level 1 - $\alpha$ & 0.05 \\
+report at bias (V) & Bias of the log\textbar J\textbar{} and R
+histograms and of $\beta$ & 0.5 \\
+single-level fit, temperature & Fit of the mean J(V) & on, 300 K \\
+\end{longtable}
+
+\textbf{Plots} (for the data set chosen in \emph{show}): every sweep
+with \textless log\textbar J\textbar\textgreater{} +/-
+$\sigma_\mathrm{log}$, the 2D histogram of log\textbar J\textbar{}
+against bias, the log\textbar J\textbar{} histogram at the report bias
+with its Gaussian, the log R histogram, the $V_\mathrm{trans}$
+histograms, the single-level fit and, after Fit $\beta$,
+log\textbar J\textbar{} against length.
+
+\textbf{Checks.} On simulated sets of 30 junctions with
+$\sigma_\mathrm{log}$ = 0.4, a rectification log R = 0.3 and $\beta$ =
+0.9, the tab finds \textless log\textbar J\textbar\textgreater{} within
+its confidence interval of the truth, log R = 0.30 +/- 0.08, the shorts,
+and $\beta$ = 0.904 +/- 0.016. Over 20 repeats with three sets of 20
+junctions, $\beta$ came out 0.92 with a scatter of 0.087 and an average
+reported error of 0.095. So the error bar is realistic: 65 \% of the
+runs fall within 1 $\sigma$, against 68 \% expected.
+
+\textbf{What to report:} \textless log\textbar J\textbar\textgreater{}
+and $\sigma_\mathrm{log}$ at a stated bias, the number of junctions and
+of sweeps, the yield, the contact area and how it was measured, and the
+confidence interval with $\alpha$. The geometric contact area is not the
+electrical one (Simeone et al.~2013 estimate $10^{-4}$ of it), so $J_0$
+is only comparable between data sets measured the same way.
+
+\hypertarget{piezo-modulation-tab}{%
+\section{11. Piezo modulation tab}\label{piezo-modulation-tab}}
+
+If a small sine is added to the piezo, the response of the conductance
+at that frequency gives the local decay constant:
+
+\[
+\beta = -\frac{d \ln G}{d z}
+\]
+
+For tunnelling $\beta$ is about 2 $\kappa$, so around 20 per nm for gold
+in vacuum and less in solvents. On a molecular plateau it's small,
+because stretching the junction hardly changes G.
+
+The modulation frequency is taken as the strongest narrow line in the
+piezo spectrum, unless you type it in. A line only counts if it's at
+least 20 times higher than the spectrum around it, so the normal piezo
+ramps aren't mistaken for a modulation. The recording is then split into
+windows of a few periods; in each window ln G and z are detrended and
+demodulated with a digital lock-in, and $\beta$ is minus the in-phase
+ratio of the two amplitudes.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3264}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4708}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1727}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+file & Which recording & first \\
+modulation frequency (Hz) & 0 = find it automatically & 0 \\
+periods per window & How long the lock-in averages & 4 \\
+auto search above (Hz) & Lowest frequency the detection looks at & 10 \\
+log G from / to & Only windows with mean log G in this range are shown &
+-6 / 1 \\
+displacement ratio & Junction nm per piezo nm (like in 4.5) & 1 \\
+\end{longtable}
+
+The top plots are the spectra of the piezo and of log G with the
+modulation frequency marked, the bottom ones $\beta$ against log G for
+every window and the $\beta$ histogram. Without modulation in the file
+you get ``No piezo modulation was found''.
+
+\hypertarget{simulation-tab}{%
+\section{12. Simulation tab}\label{simulation-tab}}
+
+The simulation makes a fake recording where the molecular conductance,
+plateau length and noise exponent are known. I use it to get to know the
+settings, to pick cutting limits and noise settings, and to check an
+analysis does what it should before I trust it with real data.
+
+Every simulated cycle goes through the same trace detection as real data
+and looks like this: approach until the contact snaps in at 1-4 $G_0$;
+pull through the atomic steps down to 1 $G_0$, break with snap-back, and
+then (with \emph{molecule probability}) a molecular plateau, otherwise
+straight tunnelling decay; hold, where G fluctuates with 1/f noise whose
+power goes as $G^{n}$; retract into the noise floor; short hold at the
+end.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3589}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3724}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2387}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Setting
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Meaning
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+number of traces & Number of cycles & 200 \\
+sampling rate, speed & Hz and junction speed in nm/s & 10000, 2 \\
+displacement ratio & Junction nm per piezo nm for the piezo signal &
+1 \\
+tunnelling decay $\beta$ & 1/nm & 10 \\
+contact size range, atomic plateau length, snap-back & Contact model &
+1-4 $G_0$, 0.08 nm, 0.3 nm \\
+molecule probability & Fraction of traces with a molecular plateau &
+0.7 \\
+molecule log G, spread & Centre and spread (decades) of the molecular
+conductance & -3.5, 0.25 \\
+plateau length, SD, slope & Mean length and spread in nm, slope in
+decades/nm & 0.4, 0.15, 0.3 \\
+2nd molecule log G, fraction & A second class, to test the clustering &
+off, 0 \\
+hold time, pull before hold, retract after hold & s, nm, nm & 1, 1, 1 \\
+noise exponent n, flicker amplitude & The real n and how big the noise
+is & 1.5, 0.05 \\
+noise floor log G, floor noise, white noise & Measurement floor and
+white noise & -5.5, 0.3, 0.02 \\
+bias, random seed & Bias in V; the same seed gives the same data & 0.1,
+1 \\
+\end{longtable}
+
+Click Generate. The recording is added (or replaces what's loaded if
+Replace loaded data is ticked), the traces are detected with the current
+settings and the status bar shows the true mean molecular conductance
+and n.~Then check: the histogram peak should be at \emph{molecule log
+G}, the mean plateau length close to \emph{plateau length} (a little
+off, depending on the window), the noise exponent equal to \emph{noise
+exponent} within its error, and with a \emph{2nd molecule} set the
+clustering should separate the two.
+
+\hypertarget{saving-results-and-settings}{%
+\section{13. Saving results and
+settings}\label{saving-results-and-settings}}
+
+File -\textgreater{} Save results (Ctrl+S) writes everything that has
+been calculated into one folder, plus the figures and a complete list of
+the settings that were used. You choose where the folder goes and what
+it's called; by default it's the name of the first recording plus
+\texttt{\_\allowbreak{}Analysis}. If the folder is already there you're
+asked whether to overwrite it; No makes a new folder with
+\texttt{\_\allowbreak{}2}, \texttt{\_\allowbreak{}3} and so on at the
+end. Every file name starts with the folder name, written
+\texttt{\textless{}name\textgreater{}} below.
+
+The text files are tab-separated with one header line, so Origin, Excel
+and Python read them directly. The figures go into a \texttt{figures}
+subfolder (13.1).
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3450}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3991}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2259}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+File
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+What's in it
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+From
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}config.\allowbreak{}json}
+& All settings of all tabs, the loaded files and the trace summary &
+always \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Good\_\allowbreak{}Curves.\allowbreak{}txt}
+& All accepted traces: trace, file, z\_nm, logG\_$G_0$ & Data \&
+Traces \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}all\_\allowbreak{}traces.\allowbreak{}npz}
+& All traces including the rejected ones (NumPy file) & Data \&
+Traces \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}logHist.\allowbreak{}txt}
+& 1D histogram, logG\_$G_0$ and counts & Histograms \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}3D\_\allowbreak{}Histogram.\allowbreak{}txt}
+& 2D histogram as a matrix, rows = log G, columns = distance &
+Histograms \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}3D\_\allowbreak{}hist\_\allowbreak{}scales.\allowbreak{}txt}
+& Bin centres, distance\_nm and logG\_$G_0$ & Histograms \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}clusterN\_\allowbreak{}logHist.\allowbreak{}txt},
+\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}3D\_\allowbreak{}Histogram.\allowbreak{}txt},
+\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}3D\_\allowbreak{}hist\_\allowbreak{}scales.\allowbreak{}txt}
+& The same for each cluster & Histograms, if there are clusters \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}peak\_\allowbreak{}fit.\allowbreak{}txt}
+& Centre, error, G, $\sigma$, FWHM, amplitude and dwell time of each
+peak & Histograms, after a fit \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}plateau length.\allowbreak{}txt}
+& Plateau length of every trace, one column per window & Plateau
+length \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Plateau\_\allowbreak{}length\_\allowbreak{}parameters.\allowbreak{}txt}
+& Statistics of each window and the tunnelling $\beta$ & Plateau
+length \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Correlation.\allowbreak{}txt},
+\texttt{\_\allowbreak{}Correlation\_\allowbreak{}scales.\allowbreak{}txt}
+& Correlation matrix; bin centres and mean histogram & Correlation \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Clustering\_\allowbreak{}Results.\allowbreak{}txt}
+& Traces per cluster, silhouette, settings & Clustering \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}cluster\_\allowbreak{}labels.\allowbreak{}txt}
+& Trace, cluster, PC1-PC3 & Clustering \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}cluster\_\allowbreak{}logHist.\allowbreak{}txt}
+& 1D histogram of each cluster & Clustering \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}windows.\allowbreak{}txt}
+& Every window: segment, start, samples, G, noise power, kurtosis,
+drift, ADF p, accepted & Flicker noise \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}PSD.\allowbreak{}txt}
+& Frequency, mean PSD, floor PSD & Flicker noise \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}scaling.\allowbreak{}txt}
+& n, Pearson r, Kendall $\tau$, 2D Gaussian rho & Flicker noise \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}bell\_\allowbreak{}hist.\allowbreak{}txt}
+& Bell histogram as a matrix & Flicker noise \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}Noise\_\allowbreak{}summary.\allowbreak{}txt}
+& n with errors for all estimators, bell parameters, counts, settings &
+Flicker noise \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}DATA/\allowbreak{}IV\_\allowbreak{}Curves\_\allowbreak{}F.\allowbreak{}txt},
+\texttt{IV\_\allowbreak{}Curves\_\allowbreak{}B.\allowbreak{}txt} & V/I
+column pairs for every forward / backward curve & I-V \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}models.\allowbreak{}txt}
+& Per curve: low-bias G, $V_t^{+}$, $V_t^{-}$, $\varepsilon_0$ and a
+from TVS, $\varepsilon_0$, $\Gamma$ and a from the fit with errors,
+$R^{2}$ & I-V, after the model fit \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}models\_\allowbreak{}summary.\allowbreak{}txt}
+& Fits of the mean curves, medians, settings & I-V, after the model
+fit \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}IV\_\allowbreak{}most\_\allowbreak{}probable.\allowbreak{}txt}
+& Most probable current per bias bin, $\sigma$, points, fitted current &
+I-V, after the model fit \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}events.\allowbreak{}txt}
+& Every event: segment, sample, time, mechanical yes/no, dG/dt, log G
+before and after & Events \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}events\_\allowbreak{}per\_\allowbreak{}trace.\allowbreak{}txt}
+& Flickers and mechanical events per trace and its class & Events \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}hold\_\allowbreak{}time\_\allowbreak{}histogram.\allowbreak{}txt},
+\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}scales.\allowbreak{}txt},
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}hold\_\allowbreak{}most\_\allowbreak{}probable.\allowbreak{}txt}
+& Conductance-time histogram of the holds and the most probable log G
+per time & Events, with holds \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}events\_\allowbreak{}summary.\allowbreak{}txt}
+& Counts and settings & Events \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}EGaIn\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}logJ.\allowbreak{}txt}
+& Per bias: \textless log\textbar J\textbar\textgreater,
+$\sigma_\mathrm{log}$, CI, sweeps & EGaIn \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}EGaIn\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}sweeps\_\allowbreak{}logJ.\allowbreak{}txt}
+& log\textbar J\textbar{} of every sweep on the bias grid & EGaIn \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}EGaIn\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}logR.\allowbreak{}txt},
+\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}Vtrans.\allowbreak{}txt},
+\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}summary.\allowbreak{}txt}
+& Rectification per bias, $V_\mathrm{trans}$ per cycle, summary &
+EGaIn \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}EGaIn\_\allowbreak{}beta.\allowbreak{}txt}
+& $\beta$, $J_0$ and the points of the fit & EGaIn, after Fit $\beta$ \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}junctions.\allowbreak{}txt}
+& Per trace: junction yes/no, flat plateau length, plateau log G &
+Junction statistics \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}junction\_\allowbreak{}blocks.\allowbreak{}txt}
+& Per block: mean trace number, yield, its error, median plateau log G,
+traces & Junction statistics \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}junction\_\allowbreak{}summary.\allowbreak{}txt}
+& Yield, medians, drift, settings & Junction statistics \\
+\texttt{\textless{}name\textgreater{}\_\allowbreak{}piezo\_\allowbreak{}modulation.\allowbreak{}txt}
+& t, logG, amplitudes, $\beta$ and phase per window & Piezo
+modulation \\
+\texttt{figures/\allowbreak{}\textless{}name\textgreater{}\_\allowbreak{}\textless{}plot\textgreater{}.\allowbreak{}pdf}
+and \texttt{.\allowbreak{}png} & Every plot as its own figure (13.1) &
+every tab \\
+\texttt{\textless{}name\textgreater{}.\allowbreak{}opju} & Origin
+project with the plot data and graphs, if ``plot with'' includes Origin
+(13.1) & every tab \\
+\end{longtable}
+
+Plateau length, Junction statistics and Correlation results get the
+cluster name added
+(e.g.~\texttt{\textless{}name\textgreater{}\_\allowbreak{}cluster2\_\allowbreak{}Correlation.\allowbreak{}txt})
+if they were calculated for one cluster.
+
+\hypertarget{figures}{%
+\subsection{13.1 Figures}\label{figures}}
+
+Every plot is saved as its own figure, sized for a journal. Nothing is
+combined into one image, except that 2D histograms keep their colour
+bar, because you can't read them without it. Multi-panel figures can be
+put together afterwards in Illustrator, Inkscape or similar.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1517}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4252}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3931}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Default
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Nature asks for
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Width & 89 mm (one column) & 89 mm single, 120 mm 1.5 columns, 183 mm
+double \\
+Font & Arial 7 pt, tick labels and legends 6 pt & sans-serif, 5-7 pt \\
+Lines & data 0.75 pt, axes and ticks 0.5 pt & at least 0.5 pt \\
+Colours & Okabe-Ito palette (colour-blind safe), viridis for maps &
+colour-blind friendly \\
+Titles & none, the file name says what it is & no panel titles \\
+Files & PDF with editable text, plus a 600 dpi PNG & vector, or at least
+300 dpi \\
+\end{longtable}
+
+All of this can be changed under File -\textgreater{} Figure export
+settings (width, font, font size, line widths, tick direction, formats
+pdf/png/tiff/svg/eps, resolution). The settings are remembered and also
+written to \texttt{*\_\allowbreak{}config.\allowbreak{}json}.
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4936}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2859}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1906}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Figure files
+(\texttt{figures/\allowbreak{}\textless{}name\textgreater{}\_\allowbreak{}.\allowbreak{}.\allowbreak{}.\allowbreak{}})
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+What they show
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Tab
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+\texttt{example\_\allowbreak{}traces} & Random accepted traces & Data \&
+Traces \\
+\texttt{logG\_\allowbreak{}histogram},
+\texttt{2D\_\allowbreak{}histogram},
+\texttt{clusterN\_\allowbreak{}logG\_\allowbreak{}histogram},
+\texttt{clusterN\_\allowbreak{}2D\_\allowbreak{}histogram} & 1D and 2D
+histograms of all traces and of each cluster & Histograms \\
+\texttt{plateau\_\allowbreak{}length\_\allowbreak{}histogram},
+\texttt{tunnelling\_\allowbreak{}decay\_\allowbreak{}histogram} &
+Plateau lengths and tunnelling $\beta$ & Plateau length \\
+\texttt{correlation\_\allowbreak{}map},
+\texttt{correlation\_\allowbreak{}mean\_\allowbreak{}histogram} &
+Correlation map and mean histogram & Correlation \\
+\texttt{clustering\_\allowbreak{}PCA\_\allowbreak{}scree},
+\texttt{clustering\_\allowbreak{}PCA\_\allowbreak{}scatter},
+\texttt{clustering\_\allowbreak{}logG\_\allowbreak{}histograms},
+\texttt{clustering\_\allowbreak{}silhouette\_\allowbreak{}scan},
+\texttt{clustering\_\allowbreak{}clusterN\_\allowbreak{}2D\_\allowbreak{}histogram}
+& PCA and cluster results & Clustering \\
+\texttt{noise\_\allowbreak{}example\_\allowbreak{}segment},
+\texttt{noise\_\allowbreak{}PSD},
+\texttt{noise\_\allowbreak{}scaling\_\allowbreak{}fits},
+\texttt{noise\_\allowbreak{}bell\_\allowbreak{}histogram},
+\texttt{noise\_\allowbreak{}correlation\_\allowbreak{}vs\_\allowbreak{}n},
+\texttt{noise\_\allowbreak{}fit\_\allowbreak{}residuals} & Flicker noise
+& Flicker noise \\
+\texttt{junction\_\allowbreak{}plateau\_\allowbreak{}conductance\_\allowbreak{}histogram},
+\texttt{junction\_\allowbreak{}conductance\_\allowbreak{}vs\_\allowbreak{}trace},
+\texttt{junction\_\allowbreak{}yield\_\allowbreak{}vs\_\allowbreak{}trace},
+\texttt{junction\_\allowbreak{}plateau\_\allowbreak{}length\_\allowbreak{}histogram},
+\texttt{junction\_\allowbreak{}length\_\allowbreak{}vs\_\allowbreak{}conductance}
+& Junction yield and plateau statistics & Junction statistics \\
+\texttt{IV\_\allowbreak{}curves},
+\texttt{IV\_\allowbreak{}current\_\allowbreak{}histogram},
+\texttt{IV\_\allowbreak{}conductance\_\allowbreak{}histogram},
+\texttt{IV\_\allowbreak{}dIdV\_\allowbreak{}histogram} & I-V curves and
+histograms & I-V \\
+\texttt{events\_\allowbreak{}example\_\allowbreak{}trace},
+\texttt{events\_\allowbreak{}example\_\allowbreak{}derivative},
+\texttt{events\_\allowbreak{}trace\_\allowbreak{}classes},
+\texttt{events\_\allowbreak{}flickers\_\allowbreak{}per\_\allowbreak{}trace},
+\texttt{events\_\allowbreak{}transition\_\allowbreak{}map},
+\texttt{events\_\allowbreak{}hold\_\allowbreak{}time\_\allowbreak{}histogram}
+& Events & Events \\
+\texttt{EGaIn\_\allowbreak{}\textless{}set\textgreater{}\_\allowbreak{}egain\_\allowbreak{}JV},
+\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}logJ\_\allowbreak{}2D\_\allowbreak{}histogram},
+\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}logJ\_\allowbreak{}histogram},
+\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}rectification\_\allowbreak{}histogram},
+\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}transition\_\allowbreak{}voltage\_\allowbreak{}histogram},
+\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}SLM\_\allowbreak{}fit},
+\texttt{.\allowbreak{}.\allowbreak{}.\allowbreak{}\_\allowbreak{}beta} &
+Ensemble junctions, one set per data set & EGaIn \\
+\texttt{IV\_\allowbreak{}SLM\_\allowbreak{}fit},
+\texttt{IV\_\allowbreak{}Fowler\_\allowbreak{}Nordheim},
+\texttt{IV\_\allowbreak{}transition\_\allowbreak{}voltage\_\allowbreak{}histogram},
+\texttt{IV\_\allowbreak{}SLM\_\allowbreak{}parameters},
+\texttt{IV\_\allowbreak{}eps0\_\allowbreak{}histogram} & Single-level
+model and TVS & I-V, after the model fit \\
+\texttt{modulation\_\allowbreak{}piezo\_\allowbreak{}spectrum},
+\texttt{modulation\_\allowbreak{}logG\_\allowbreak{}spectrum},
+\texttt{modulation\_\allowbreak{}beta\_\allowbreak{}vs\_\allowbreak{}G},
+\texttt{modulation\_\allowbreak{}beta\_\allowbreak{}histogram} & Piezo
+modulation & Piezo modulation \\
+\end{longtable}
+
+The plots on screen are drawn by the same code, so the exported figures
+look the same, just at journal size. If you want the whole screen view
+as one picture, use the save button in the plot toolbar.
+
+\textbf{Plotting in Origin instead.} If you finish figures in Origin,
+set ``plot with'' in File -\textgreater{} Figure export settings to
+\texttt{Origin} (or \texttt{matplotlib + Origin} for both). Save results
+then also puts every plot into Origin: the plotted data go into a
+workbook (heatmaps into a matrix book) and each plot is rebuilt as an
+Origin graph with the same page size, axis box, fonts, line widths,
+colours, axis ranges, legend and labels as the exported figure, so they
+look the same and stay editable. Histogram steps keep the original bin
+centres and counts next to the step outline, and heatmaps use the same
+colour map. Every tab gets its own folder in the Project Explorer, and
+the project is saved as
+\texttt{\textless{}name\textgreater{}.\allowbreak{}opju} in the results
+folder. With \texttt{Origin} alone no figure files are written. File
+-\textgreater{} Send plots to Origin does the same for the current plots
+without saving anything, which is handy for trying settings.
+
+This needs Windows, Origin 2021 or newer and the Python package
+originpro (\texttt{py -m pip install originpro}). If Origin is already
+open the graphs go into the open project, otherwise Origin is started;
+either way it stays open. Origin is controlled from the program, so
+leave it alone until the status bar says it's done (about 2 s per plot).
+If Origin has a dialog open, for example a licence reminder, close it
+first.
+
+\hypertarget{settings-and-converted-files}{%
+\subsection{13.2 Settings and converted
+files}\label{settings-and-converted-files}}
+
+File -\textgreater{} Save settings writes all settings to a JSON file
+and File -\textgreater{} Load settings reads them back; a
+\texttt{*\_\allowbreak{}config.\allowbreak{}json} from a results folder
+works too, which is handy for repeating an analysis. The
+\texttt{.\allowbreak{}cvr} (and \texttt{.\allowbreak{}csv}) files from
+the Convert tab are written separately, see 3.2.
+
+\hypertarget{troubleshooting}{%
+\section{14. Troubleshooting}\label{troubleshooting}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.3386}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.6314}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Problem
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+What to do
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+All traces rejected with ``never reaches high limit'' & The contact
+doesn't get above \emph{high limit to check}. Lower it to just under the
+contact level you see in the overview. If the amplifier saturates below
+1 $G_0$, check \emph{Ia saturation} so saturated points count as contact
+(3.3). \\
+All traces rejected with ``never reaches low limit'' & The noise floor
+is above \emph{low limit to check}. Put both low limits about half a
+decade above the floor. With holds in the measurement, leave \emph{join
+pull-hold-pull} on. \\
+Conductance off by a constant factor & For \texttt{.\allowbreak{}cvr}
+files the \emph{constant bias} in the column settings has to match the
+measurement; for other files check the \emph{Ia / Ib scale} and
+\emph{conductance unit}. For TDMS, look at the bias channel and series
+resistor in the Convert preview. \\
+Distance axis is noisy or zig-zags & More \emph{piezo smoothing}, or
+\emph{distance from} \texttt{index} with the right piezo rate. \\
+Distances far too long or short (MCBJ) & Calibrate the
+\emph{displacement ratio} with the tunnelling fit (6.3). \\
+``No hold segments were found'' & No piezo stops in the recording, or no
+piezo signal at all. Use \emph{segments} = \texttt{plateau windows}, or
+measure with holds. \\
+``Only N accepted windows'' & Widen \emph{accept log G}, make \emph{peak
+sigma} or \emph{n sigma} bigger, or switch drift, kurtosis and ADF off
+one at a time to see which one throws the windows out. \\
+``The integration band contains fewer than 2 frequency points'' & The
+windows are too short for the band. Make \emph{window} longer or raise
+\emph{integrate from}. \\
+OLS and Theil-Sen give different n & There are outliers. Use Theil-Sen,
+look at the residual plot, maybe switch on the ADF test. \\
+``No piezo modulation was found'' & There's no modulation in the file or
+it's too weak. Type in the \emph{modulation frequency} if you know
+it. \\
+``No bias sweeps were found'' & The bias is constant; I-V needs
+sweeps. \\
+No transition voltage (empty $V_t$) & The maximum of $V^{2}$/|I| is at
+the end of the sweep, so the bias didn't reach $V_t$. Sweep further if
+the junction survives it, or rely on the model fit. \\
+SLM errors huge, $\varepsilon_0$ and $\Gamma$ on a diagonal streak & The
+bias range is far below $\varepsilon_0$, so the curves can't separate
+$\varepsilon_0$ and $\Gamma$. Report the low-bias conductance instead,
+or measure to higher bias. \\
+Events: nothing found although steps are visible & Check
+\emph{derivative dt} and the thresholds: they are on the dG/dt scale
+with G in $G_0$. Look at the derivative plot and put the thresholds
+under the peaks you want. With \emph{peak detection} =
+\texttt{minimum width}, lower \emph{peak width}. \\
+Events: very many flickers on noisy data & Raise the flicker threshold
+or the low-pass strength; check \emph{valid from / to log G} so the
+noise floor is excluded. \\
+EGaIn: every junction is a short & \emph{current unit} or \emph{contact
+diameter} is wrong (J too large), or the short threshold is too low. \\
+EGaIn: no rectification or $V_\mathrm{trans}$ & The sweeps don't cover
+both polarities in one cycle, or the bias doesn't go far enough for a
+$V_\mathrm{trans}$. \\
+Rashid noise preset accepts almost nothing & The holds start or end off
+the molecular plateau (+/- 1 $\sigma$ is strict). Check that \emph{peak
+centre} is set, or relax \emph{ends within +/- n sigma}. \\
+Junction yield close to 100 \% for a blank measurement & Tunnelling
+counts as plateau: lower \emph{flat if slope below} or raise
+\emph{junction if flat length above} (6.4). \\
+Junction yield close to 0 \% although there's a clear peak & The
+plateaus are tilted more than \emph{flat if slope below}, or the window
+misses them; use Use peak from histogram fit. \\
+Clustering changes from run to run & Keep the \emph{random seed} fixed
+(it's 0 by default). \\
+Window empty or tiny on a 4K screen & Set the Windows display scaling to
+150-200 \%. \\
+``No column \ldots{} available: \ldots{}'' & The column name or number
+isn't in the file. The message lists what is there; Show columns (4.1)
+does too. Numbers start at 0. \\
+Igor file: ``No numeric waves found'' & The file has only text waves, or
+igor2 is missing (\texttt{py -m pip install igor2}). \\
+Error message about a file & The file is broken or isn't break-junction
+data. Open it in a text editor or a TDMS viewer and have a look. \\
+\end{longtable}
+
+You can load several files at once; they're analysed together, the trace
+numbers just continue and every trace remembers which file it came from.
+The program never changes your data files, it only reads them and writes
+results to the folder you pick.
+
+To repeat an old analysis, load the
+\texttt{*\_\allowbreak{}config.\allowbreak{}json} from its results
+folder with File -\textgreater{} Load settings, load the same data and
+run the same tabs.
+
+To check that an installation works, open a command prompt in the
+program folder and run
+\texttt{GZero.\allowbreak{}exe --selftest report.\allowbreak{}txt} (or
+\texttt{py GZero.\allowbreak{}py --selftest report.\allowbreak{}txt}).
+It runs the simulation, trace detection, histogram fit, dwell time,
+clustering, noise analysis, junction yield, event detection, I-V
+detection, the single-level fit (also at 300 K on the energy grid with
+Levenberg-Marquardt) and TVS, the EGaIn statistics with $\beta$ on
+simulated junctions, and the figure export without opening a window and
+writes the results to \texttt{report.\allowbreak{}txt}. If everything is
+fine the last line is \texttt{SELFTEST OK}.
+
+\hypertarget{references}{%
+\section{15. References}\label{references}}
+
+I checked entries 1-24 against Crossref on 8 October 2026. The table at
+the end lists what to cite for which analysis.
+
+\hypertarget{break-junction-technique-and-background}{%
+\subsection{15.1 Break-junction technique and
+background}\label{break-junction-technique-and-background}}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  M. A. Reed, C. Zhou, C. J. Muller, T. P. Burgin, J. M. Tour,
+  ``Conductance of a molecular junction'', \emph{Science} 278, 252-254
+  (1997).
+  \href{https://doi.org/10.1126/science.278.5336.252}{doi:10.1126/science.278.5336.252}
+\item
+  B. Xu, N. J. Tao, ``Measurement of single-molecule resistance by
+  repeated formation of molecular junctions'', \emph{Science} 301,
+  1221-1223 (2003).
+  \href{https://doi.org/10.1126/science.1087481}{doi:10.1126/science.1087481}
+\item
+  L. Venkataraman, J. E. Klare, C. Nuckolls, M. S. Hybertsen, M. L.
+  Steigerwald, ``Dependence of single-molecule junction conductance on
+  molecular conformation'', \emph{Nature} 442, 904-907 (2006).
+  \href{https://doi.org/10.1038/nature05037}{doi:10.1038/nature05037}
+\item
+  N. Agrait, A. Levy Yeyati, J. M. van Ruitenbeek, ``Quantum properties
+  of atomic-sized conductors'', \emph{Physics Reports} 377, 81-279
+  (2003).
+  \href{https://doi.org/10.1016/S0370-1573(02)00633-6}{doi:10.1016/S0370-1573(02)00633-6}
+\item
+  T. A. Su, M. Neupane, M. L. Steigerwald, L. Venkataraman, C. Nuckolls,
+  ``Chemical principles of single-molecule electronics'', \emph{Nature
+  Reviews Materials} 1, 16002 (2016).
+  \href{https://doi.org/10.1038/natrevmats.2016.2}{doi:10.1038/natrevmats.2016.2}
+\item
+  D. Xiang, X. Wang, C. Jia, T. Lee, X. Guo, ``Molecular-scale
+  electronics: from concept to function'', \emph{Chemical Reviews} 116,
+  4318-4440 (2016).
+  \href{https://doi.org/10.1021/acs.chemrev.5b00680}{doi:10.1021/acs.chemrev.5b00680}
+\end{enumerate}
+
+\hypertarget{flicker-noise}{%
+\subsection{15.2 Flicker noise}\label{flicker-noise}}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{6}
+\tightlist
+\item
+  O. Adak, E. Rosenthal, J. Meisner, E. F. Andrade, A. N. Pasupathy, C.
+  Nuckolls, M. S. Hybertsen, L. Venkataraman, ``Flicker noise as a probe
+  of electronic interaction at metal-single molecule interfaces'',
+  \emph{Nano Letters} 15, 4143-4149 (2015).
+  \href{https://doi.org/10.1021/acs.nanolett.5b01270}{doi:10.1021/acs.nanolett.5b01270}
+  Bell-shaped NP/$G^{n}$ analysis; n = 1 through-bond, n = 2
+  through-space.
+\item
+  A. Magyarkuti, O. Adak, A. Halbritter, L. Venkataraman, ``Electronic
+  and mechanical characteristics of stacked dimer molecular junctions'',
+  \emph{Nanoscale} 10, 3362-3368 (2018).
+  \href{https://doi.org/10.1039/C7NR08354H}{doi:10.1039/C7NR08354H}
+  Determines n from the zero of the correlation, equivalent to the OLS
+  estimator in Chapter 9.4.
+\item
+  U. Rashid, W. Bro-Jorgensen, K. B. Harilal, P. A. Sreelakshmi, R. R.
+  Mondal, V. Chittari Pisharam, K. N. Parida, K. Geetharani, J. M.
+  Hamill, V. Kaliginedi, ``Chemistry of the Au-thiol interface through
+  the lens of single-molecule flicker noise measurements'', \emph{J. Am.
+  Chem. Soc.} 146, 9063-9073 (2024).
+  \href{https://doi.org/10.1021/jacs.3c14079}{doi:10.1021/jacs.3c14079}
+  A recent application of noise scaling to anchor-group chemistry.
+\item
+  J. M. F. Morris, J. Potter, D. Bates, C. Wu, C. M. Robertson, S. J.
+  Higgins, R. J. Nichols, P. J. Low, A. Vezzoli, ``Digging through the
+  (statistical) dirt: a reproducible method for single-molecule flicker
+  noise analysis'', \emph{J. Phys. Chem. C} 129, 4097-4104 (2025).
+  \href{https://doi.org/10.1021/acs.jpcc.4c07780}{doi:10.1021/acs.jpcc.4c07780}
+  (\href{https://pmc.ncbi.nlm.nih.gov/articles/PMC11874016/}{open
+  access}) ADF filter, Theil-Sen estimator, trimming. Data and code:
+  \href{https://doi.org/10.17638/datacat.liverpool.ac.uk/2854}{doi:10.17638/datacat.liverpool.ac.uk/2854}.
+\end{enumerate}
+
+\hypertarget{trace-statistics-correlation-and-clustering}{%
+\subsection{15.3 Trace statistics, correlation and
+clustering}\label{trace-statistics-correlation-and-clustering}}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{10}
+\tightlist
+\item
+  P. Makk, D. Tomaszewski, J. Martinek, Z. Balogh, S. Csonka, M.
+  Wawrzyniak, M. Frei, L. Venkataraman, A. Halbritter, ``Correlation
+  analysis of atomic and single-molecule junction conductance'',
+  \emph{ACS Nano} 6, 3411-3423 (2012).
+  \href{https://doi.org/10.1021/nn300440f}{doi:10.1021/nn300440f}
+\item
+  M. Lemmer, M. S. Inkpen, K. Kornysheva, N. J. Long, T. Albrecht,
+  ``Unsupervised vector-based classification of single-molecule charge
+  transport data'', \emph{Nature Communications} 7, 12922 (2016).
+  \href{https://doi.org/10.1038/ncomms12922}{doi:10.1038/ncomms12922}
+\item
+  D. Cabosart, M. El Abbassi, D. Stefani, R. Frisenda, M. Calame, H. S.
+  J. van der Zant, M. L. Perrin, ``A reference-free clustering method
+  for the analysis of molecular break-junction measurements'',
+  \emph{Applied Physics Letters} 114, 143102 (2019).
+  \href{https://doi.org/10.1063/1.5089198}{doi:10.1063/1.5089198} See
+  also the Comment by K. P. Hoxha, M. G. Reuter, \emph{Appl. Phys.
+  Lett.} 117, 136101 (2020),
+  \href{https://doi.org/10.1063/5.0013531}{doi:10.1063/5.0013531}.
+\item
+  N. D. Bamberger, J. A. Ivie, K. N. Parida, D. V. McGrath, O. L. A.
+  Monti, ``Unsupervised segmentation-based machine learning as an
+  advanced analysis tool for single molecule break junction data'',
+  \emph{J. Phys. Chem. C} 124, 18302-18315 (2020).
+  \href{https://doi.org/10.1021/acs.jpcc.0c03612}{doi:10.1021/acs.jpcc.0c03612}
+  Correction: \emph{J. Phys. Chem. C} 124, 24029-24031 (2020),
+  \href{https://doi.org/10.1021/acs.jpcc.0c08721}{doi:10.1021/acs.jpcc.0c08721}.
+\item
+  A. Magyarkuti, N. Balogh, Z. Balogh, L. Venkataraman, A. Halbritter,
+  ``Unsupervised feature recognition in single-molecule break junction
+  data'', \emph{Nanoscale} 12, 8355-8363 (2020).
+  \href{https://doi.org/10.1039/D0NR00467G}{doi:10.1039/D0NR00467G}
+\item
+  Z. Balogh, G. Mezei, N. Tenk, A. Magyarkuti, A. Halbritter,
+  ``Configuration-specific insight into single-molecule conductance and
+  noise data revealed by the principal component projection method'',
+  \emph{J. Phys. Chem. Lett.} 14, 5109-5118 (2023).
+  \href{https://doi.org/10.1021/acs.jpclett.3c00677}{doi:10.1021/acs.jpclett.3c00677}
+  Combines PCA classes with noise analysis.
+\end{enumerate}
+
+\hypertarget{statistical-and-signal-processing-methods}{%
+\subsection{15.4 Statistical and signal-processing
+methods}\label{statistical-and-signal-processing-methods}}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{16}
+\tightlist
+\item
+  H. Theil, ``A rank-invariant method of linear and polynomial
+  regression analysis'' (originally \emph{Proc. Koninklijke Nederlandse
+  Akademie van Wetenschappen}, 1950); reprinted in \emph{Henri Theil's
+  Contributions to Economics and Econometrics}, Advanced Studies in
+  Theoretical and Applied Econometrics, pp.~345-381 (Springer, 1992).
+  \href{https://doi.org/10.1007/978-94-011-2546-8_20}{doi:10.1007/978-94-011-2546-8\_20}
+\item
+  P. K. Sen, ``Estimates of the regression coefficient based on
+  Kendall's $\tau$'', \emph{J. Am. Stat. Assoc.} 63, 1379-1389 (1968).
+  \href{https://doi.org/10.1080/01621459.1968.10480934}{doi:10.1080/01621459.1968.10480934}
+\item
+  M. G. Kendall, ``A new measure of rank correlation'',
+  \emph{Biometrika} 30, 81-93 (1938).
+  \href{https://doi.org/10.1093/biomet/30.1-2.81}{doi:10.1093/biomet/30.1-2.81}
+\item
+  D. A. Dickey, W. A. Fuller, ``Distribution of the estimators for
+  autoregressive time series with a unit root'', \emph{J. Am. Stat.
+  Assoc.} 74, 427-431 (1979).
+  \href{https://doi.org/10.1080/01621459.1979.10482531}{doi:10.1080/01621459.1979.10482531}
+\item
+  J. G. MacKinnon, ``Approximate asymptotic distribution functions for
+  unit-root and cointegration tests'', \emph{J. Business \& Economic
+  Statistics} 12, 167-176 (1994).
+  \href{https://doi.org/10.1080/07350015.1994.10510005}{doi:10.1080/07350015.1994.10510005}
+\item
+  P. Welch, ``The use of fast Fourier transform for the estimation of
+  power spectra: a method based on time averaging over short, modified
+  periodograms'', \emph{IEEE Trans. Audio Electroacoust.} 15, 70-73
+  (1967).
+  \href{https://doi.org/10.1109/TAU.1967.1161901}{doi:10.1109/TAU.1967.1161901}
+\item
+  A. Savitzky, M. J. E. Golay, ``Smoothing and differentiation of data
+  by simplified least squares procedures'', \emph{Analytical Chemistry}
+  36, 1627-1639 (1964).
+  \href{https://doi.org/10.1021/ac60214a047}{doi:10.1021/ac60214a047}
+\end{enumerate}
+
+\hypertarget{software-libraries}{%
+\subsection{15.5 Software libraries}\label{software-libraries}}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{23}
+\tightlist
+\item
+  P. Virtanen et al., ``SciPy 1.0: fundamental algorithms for scientific
+  computing in Python'', \emph{Nature Methods} 17, 261-272 (2020).
+  \href{https://doi.org/10.1038/s41592-019-0686-2}{doi:10.1038/s41592-019-0686-2}
+\item
+  F. Pedregosa et al., ``Scikit-learn: machine learning in Python'',
+  \emph{J. Machine Learning Research} 12, 2825-2830 (2011). No DOI;
+  \href{https://jmlr.org/papers/v12/pedregosa11a.html}{jmlr.org}. Not in
+  Crossref and not re-checked.
+\end{enumerate}
+
+\hypertarget{junction-statistics-i-v-models-events-and-ensemble-junctions}{%
+\subsection{15.6 Junction statistics, I-V models, events and ensemble
+junctions}\label{junction-statistics-i-v-models-events-and-ensemble-junctions}}
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{25}
+\item
+  M. Kamenetska, M. Koentopp, A. C. Whalley, Y. S. Park, M. L.
+  Steigerwald, C. Nuckolls, M. S. Hybertsen, L. Venkataraman,
+  ``Formation and evolution of single-molecule junctions'', \emph{Phys.
+  Rev.~Lett.} 102, 126803 (2009).
+  \href{https://doi.org/10.1103/PhysRevLett.102.126803}{doi:10.1103/PhysRevLett.102.126803}
+  Junction formation probability and plateau length with molecular
+  length.
+\item
+  L. A. Zotti, T. Kirchner, J.-C. Cuevas, F. Pauly, T. Huhn, E. Scheer,
+  A. Erbe, ``Revealing the role of anchoring groups in the electrical
+  conduction through single-molecule junctions'', \emph{Small} 6,
+  1529-1535 (2010).
+  \href{https://doi.org/10.1002/smll.200902227}{doi:10.1002/smll.200902227}
+  Single-level model fits of MCBJ I-V curves.
+\item
+  J. M. Beebe, B. Kim, J. W. Gadzuk, C. D. Frisbie, J. G. Kushmerick,
+  ``Transition from direct tunneling to field emission in
+  metal-molecule-metal junctions'', \emph{Phys. Rev.~Lett.} 97, 026801
+  (2006).
+  \href{https://doi.org/10.1103/PhysRevLett.97.026801}{doi:10.1103/PhysRevLett.97.026801}
+  Transition voltage spectroscopy.
+\item
+  I. Baldea, ``Ambipolar transition voltage spectroscopy: analytical
+  results and experimental agreement'', \emph{Phys. Rev.~B} 85, 035442
+  (2012).
+  \href{https://doi.org/10.1103/PhysRevB.85.035442}{doi:10.1103/PhysRevB.85.035442}
+  $\varepsilon_0$ and the bias asymmetry from $V_t^{+}$ and $V_t^{-}$.
+\item
+  U. Rashid, L. Medrano Sandonas, E. Chatir, Z. Ziani, P. A.
+  Sreelakshmi, S. Cobo, R. Gutierrez, G. Cuniberti, V. Kaliginedi,
+  ``Mapping the extended ground state reactivity landscape of a
+  photoswitchable molecule at a single molecular level'', \emph{J. Am.
+  Chem. Soc.} 147, 830-840 (2025).
+  \href{https://doi.org/10.1021/jacs.4c13531}{doi:10.1021/jacs.4c13531}
+  SI: flicker-noise protocol (2.3), single-level fit at finite
+  temperature on an energy grid with Levenberg-Marquardt (2.4),
+  mechanical modulation (2.5), flicker and mechanical event detection
+  (2.6), dwell time (2.7).
+\item
+  E. M. Opodi, X. Song, X. Yu, W. Hu, ``A single level tunneling model
+  for molecular junctions: evaluating the simulation methods'',
+  \emph{Phys. Chem. Chem. Phys.} 24, 11958-11966 (2022).
+  \href{https://doi.org/10.1039/D1CP05807J}{doi:10.1039/D1CP05807J}
+  Numerical integration vs approximate formulas; see the comment by I.
+  Baldea, \emph{Phys. Chem. Chem. Phys.} 26, 7230 (2024),
+  \href{https://doi.org/10.1039/D2CP05110A}{doi:10.1039/D2CP05110A}.
+\item
+  L. J. Reus, C. A. Nijhuis, J. R. Barber, M. M. Thuo, S. Tricard, G. M.
+  Whitesides, ``Statistical tools for analyzing measurements of charge
+  transport'', \emph{J. Phys. Chem. C} 116, 6714-6733 (2012).
+  \href{https://doi.org/10.1021/jp210445y}{doi:10.1021/jp210445y}
+  Gaussian log\textbar J\textbar{} statistics and junction-based degrees
+  of freedom.
+\item
+  F. C. Simeone, H. J. Yoon, M. M. Thuo, J. R. Barber, B. Smith, G. M.
+  Whitesides, ``Defining the value of injection current and effective
+  electrical contact area for EGaIn-based molecular tunneling
+  junctions'', \emph{J. Am. Chem. Soc.} 135, 18131-18144 (2013).
+  \href{https://doi.org/10.1021/ja408652h}{doi:10.1021/ja408652h}
+  $\beta$ and $J_0$ from a length series.
+\item
+  Z. Pan, \ldots, W. Hong, ``XMe-Xiamen Molecular Electronics code: an
+  intelligent and open-source data analysis tool for single-molecule
+  conductance measurements'', \emph{Chin. J. Chem.} 42, 317 (2024).
+  Code:
+  \href{https://github.com/Pilab-XMU/XMe_DataAnalysis}{github.com/Pilab-XMU/XMe\_DataAnalysis}
+  (Apache 2.0). Its EGaIn module (J from the contact diameter,
+  log\textbar J\textbar{} statistics per bias, Gaussian fits) was used
+  as a reference. DOI not checked.
+\item
+  GaussFit, R. C. Chiechi group:
+  \href{https://github.com/rchiechi/gaussfit}{github.com/rchiechi/gaussfit}
+  (GPL-3.0; now on codeberg.org/rcclab/GaussFit). EGaIn / CP-AFM
+  statistics. Only its methods were used as a reference (junction-based
+  confidence intervals, rectification, $V_\mathrm{trans}$ per trace). No
+  code was copied, because GPL code can't go into an Apache-licensed
+  program.
+\end{enumerate}
+
+I took the details of 26-35 from the publishers' and university
+repositories' pages and the code repositories in October 2026. They
+haven't been re-checked against Crossref like 1-24.
+
+\hypertarget{what-to-cite-for-each-analysis}{%
+\subsection{15.7 What to cite for each
+analysis}\label{what-to-cite-for-each-analysis}}
+
+\begin{longtable}[]{@{}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.5808}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.3892}}@{}}
+\toprule\noalign{}
+\begin{minipage}[b]{\linewidth}\raggedright
+Analysis in this program
+\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
+Cite
+\end{minipage} \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+Conductance histograms, plateau length & 2, 3 (technique); 4 or 5
+(review) \\
+Junction yield, plateau conductance per trace & 26 \\
+2D cross-correlation & 11 \\
+Clustering & 12, 13; 15 or 14 for related methods \\
+Flicker noise, bell / 2D Gaussian & 7 \\
+Flicker noise, OLS / zero correlation & 8 \\
+Flicker noise, ADF + Theil-Sen & 10, with 17, 18, 20 \\
+Single-level model fit of I-V curves & 27 \\
+Transition voltage spectroscopy & 28, 29 \\
+Single-level fit at finite temperature, most probable I-V, Rashid noise
+preset, events, dwell time & 30 (31 for the integration) \\
+EGaIn statistics, yield, rectification & 32; 34, 35 for the software you
+compare with \\
+$\beta$ and $J_0$ from a length series & 33 \\
+PSD (Welch), smoothing & 22, 23 \\
+Libraries used & 24, 25 \\
+\end{longtable}
+
+\end{document}

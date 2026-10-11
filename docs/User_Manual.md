@@ -562,10 +562,16 @@ Energies are in eV and V in volts, so G0 times an energy in eV is directly a cur
 I = \frac{2e}{h}\int dE\, T(E)\,[f_L(E) - f_R(E)], \qquad T(E) = \frac{\Gamma^2}{(E - \varepsilon)^2 + \Gamma^2}
 ```
 
-with f_L,R the Fermi functions at mu = +/-V/2. This T(E) is the same as 2 pi Gamma_L Gamma_R / Gamma_tot D(E), with a Lorentzian density of states D of width Gamma_tot = Gamma_L + Gamma_R, as written in Rashid et al. (2025). Gamma here is Gamma_L,R, the number in their Table S1. The program can do the integral in two ways:
+with f_L and f_R the Fermi functions at mu = +V/2 and -V/2. This T(E) is the same as 2 pi Gamma_L Gamma_R D(E) / Gamma_tot, with a Lorentzian density of states D(E) of width Gamma_tot = Gamma_L + Gamma_R, as written in Rashid et al. (2025). Gamma here is Gamma_L,R, the number in their Table S1. The program can do the integral in two ways:
 
-- `analytic`: the integral of the Lorentzian against a Fermi function has a closed form with the digamma function psi, int T(E) f(E - mu) dE = pi Gamma [1/2 - Im psi(1/2 + (Gamma - i(mu - eps)) / (2 pi kT)) / pi]. It is exact and fast.
+- `analytic`: the integral of the Lorentzian against a Fermi function has a closed form with the digamma function psi (formula below). It is exact and fast.
 - `energy grid`: the integral done numerically on an energy grid, as in Rashid et al. (2025, SI 2.4): -10 to 10 eV in steps of 0.02 meV. To keep this fast, T(E) is integrated once and the Fermi functions enter by one convolution (FFT) per evaluation.
+
+The closed form used by `analytic`:
+
+```latex
+\int T(E)\, f(E - \mu)\, dE = \pi\Gamma \left[\frac{1}{2} - \frac{1}{\pi}\, \mathrm{Im}\, \psi\!\left(\frac{1}{2} + \frac{\Gamma - i(\mu - \varepsilon)}{2\pi k_B T}\right)\right]
+```
 
 The two agree to better than 10^-9 (checked at 0 and 300 K, eps0 = 1.1 eV, Gamma = 11.3 meV). The single curves are always fitted with the closed form. `energy grid` is used for the mean and most probable curves, starting from the closed-form result, so a grid fit takes under a second.
 
@@ -640,11 +646,17 @@ Large-area junctions (EGaIn tips, CP-AFM, crossbars) measure many molecules at o
 2. A junction whose |J| ever reaches the *short threshold* is a short. It counts against the yield (working junctions / all junctions) and is left out.
 3. The bias is cut into sweeps where it turns around, and every sweep is put on a common bias grid (*bias grid step*). 0 V is left out, because log|J| is meaningless there.
 4. At every bias, the log10|J| values of all sweeps are histogrammed (*bins / decade*) and fitted with a Gaussian. The centre <log|J|> and width sigma_log are reported, as in Reus et al.
-5. The confidence interval uses the number of working junctions n_j as degrees of freedom: CI = t(1 - alpha/2, n_j - 1) sigma_log / sqrt(n_j - 1).
+5. The confidence interval uses the number of working junctions n_j as degrees of freedom (formula below).
 6. Rectification: sweeps are grouped into cycles that cover both polarities, and log R = log|J(+V)| - log|J(-V)| is histogrammed and fitted for every |V|.
 7. V_trans (10.3) for every cycle.
 8. Optionally the single-level model (10.2) is fitted to the Gaussian-mean J(V), with N free (molecules per cm^2 that carry the current).
-9. Fit beta: with two or more analysed data sets with lengths, log10 <|J|> at *report at bias* is fitted against length, log10 J = log10 J0 - beta d / ln 10. Each point is weighted by the standard error of its mean, sigma_log / sqrt(n_j - 1). With more than two sets, the error is scaled up by the scatter of the points if that is larger. beta comes out per unit of the length you typed (Simeone et al. 2013 report 0.92 per carbon for alkanethiolates).
+9. Fit beta: with two or more analysed data sets with lengths, log10 <|J|> at *report at bias* is fitted against the length d (formula below). Each point is weighted by the standard error of its mean, sigma_log / sqrt(n_j - 1). With more than two sets, the error is scaled up by the scatter of the points if that is larger. beta comes out per unit of the length you typed (Simeone et al. 2013 report 0.92 per carbon for alkanethiolates).
+
+The confidence interval (step 5) and the length dependence (step 9) are
+
+```latex
+\mathrm{CI} = t_{1-\alpha/2,\; n_j - 1}\, \frac{\sigma_\mathrm{log}}{\sqrt{n_j - 1}}, \qquad \log_{10} |J| = \log_{10} J_0 - \frac{\beta\, d}{\ln 10}
+```
 
 | Setting | Meaning | Default |
 | --- | --- | --- |
