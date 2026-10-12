@@ -238,12 +238,13 @@ Manual marks are kept until you detect the traces again.
 
 ### 4.7 Large TDMS files
 
-A 1 GB TDMS file holds tens of millions of samples per channel. Converting it in one go needs several GB of memory, because every step of the conversion makes an array as long as the file. TDMS files larger than *read in pieces above* are therefore never loaded at once:
+A 1 GB TDMS file holds tens of millions of samples per channel, and converting it in one go needs several GB of memory, because every step of the conversion makes another array as long as the file. That is what made long recordings crash or crawl. So TDMS files above *read in pieces above* are never loaded at once.
 
-1. **Loading** reads the file one piece (*piece length*, 2 minutes) at a time, converts it with the normal settings and keeps only a min/max overview of log G and the piezo for the plot. The list shows "read in pieces" next to the file.
-2. **Detect / cut traces** reads the file again, piece by piece. Every piece is read with a *margin* (60 s) before and after it, cut into traces with the normal code, and keeps only the traces and holds that start inside the piece itself. That way traces crossing the border between two pieces are found once and complete. Only the traces, the holds and the overview stay in memory, and they are all that the Histograms, Plateau length, Junction statistics, Correlation, Clustering, Flicker noise and Events tabs use.
-3. **Changing the cutting settings** and detecting again reads the file again, so the file has to stay where it is.
-4. **I-V and Piezo modulation** need the full signals. For a file read in pieces they read and convert the part between *from* and *to* (in s) in their Recording box, or the whole file if these are empty.
+When you load such a file, the program goes through it one piece at a time (*piece length*, 2 minutes by default), converts each piece with the normal settings and only keeps a min/max overview of log G and the piezo for the plot. The file list says "read in pieces" next to it.
+
+Detect / cut traces then goes through the file a second time. Each piece is read together with a *margin* (60 s) on both sides, cut into traces with the same code as always, and only the traces and holds that start inside the piece itself are kept. A trace that crosses the border between two pieces is therefore found exactly once, and in full. After that, only the traces, the holds and the overview are in memory, and that is all the Histograms, Plateau length, Junction statistics, Correlation, Clustering, Flicker noise and Events tabs need.
+
+Two things follow from this. If you change the cutting settings and detect again, the file is read again, so don't move or delete it while you're working. And the I-V and Piezo modulation tabs need the complete signals, so for a file read in pieces they read only the part between *from* and *to* (in s) in their Recording box, or the whole file if you leave these empty.
 
 | Setting | Meaning | Default |
 | --- | --- | --- |
@@ -252,9 +253,9 @@ A 1 GB TDMS file holds tens of millions of samples per channel. Converting it in
 | margin (s) | Read before and after every piece; must be longer than one trace (pull, hold and pull) | 60 |
 | overview points | Points of the overview plot | 400000 |
 
-**Is the result the same?** Yes. On a simulated recording the pieces gave exactly the same traces and holds as the whole file: the same sample ranges, log G, distance axes and accept/reject decisions, even with pieces of only 20 s. The self-test checks this every time. On a 1.29 GB file (54 million samples per channel, 90 minutes at 10 kHz, 1760 traces and 3520 holds), reading in pieces took 2.8 s to load and 11 s to cut the traces, with a peak memory of 0.7 GB. Loading the whole file took 15.6 s and 4.4 GB.
+Reading in pieces doesn't change the result. On a simulated recording it gave exactly the same traces and holds as loading the whole file (the same sample ranges, log G, distance axes and accept/reject decisions), even with pieces as short as 20 s, and the self-test checks this every time it runs. On a 1.29 GB file (54 million samples per channel, 90 minutes at 10 kHz, 1760 traces and 3520 holds) loading took 2.8 s and cutting the traces 11 s, with at most 0.7 GB of memory in use. Loading the same file in one go took 15.6 s and 4.4 GB.
 
-If a trace is longer than the margin, it can be cut off at the end of a piece; the summary under Detect / cut traces then says how many traces that affected. Make the margin longer if you hold the junction for minutes.
+The one catch is a trace longer than the margin: it can get cut off at the end of a piece. If that happens, the summary under Detect / cut traces tells you how many traces were affected. If you hold the junction for minutes, make the margin longer.
 
 ## 5. Histograms tab
 
@@ -282,13 +283,13 @@ N(x) = c + \sum_k A_k \exp\left(-\frac{(x - \mu_k)^2}{2\sigma_k^2}\right), \qqua
 
 The starting values are the highest maxima in the range. For every peak you get the centre with its error, the conductance G = 10^mu in G0, the width sigma and the FWHM (2.355 sigma) in decades. The fit is drawn in red with the conductance written next to each peak.
 
-For every peak the text also gives the **dwell time**: how long, on average, a trace spends in that conductance state. It comes from the area under the fitted peak (Rashid et al. 2025, SI 2.7):
+For every peak the text also gives the dwell time, which is how long a trace spends in that conductance state on average. It comes from the area under the fitted peak (Rashid et al. 2025, SI 2.7):
 
 ```latex
 \tau = \frac{A}{w} \cdot \frac{1000}{f_s}\ \mathrm{ms}, \qquad A = a\,\sigma\sqrt{2\pi}
 ```
 
-A is the area of the Gaussian (amplitude a, width sigma) in the per-trace histogram, w the bin width and f_s the sampling rate, so A/w is the number of samples per trace inside the peak. It needs *normalization* `per trace` or `counts`. On simulated data with 70 % molecular traces, 0.4 nm plateaus and 2 nm/s pulling, the expected value is 0.7 x 0.2 s = 140 ms, and the fit gives 135-146 ms.
+Here A is the area of the Gaussian (amplitude a, width sigma) in the per-trace histogram, w is the bin width and f_s the sampling rate, so A/w is simply the number of samples per trace that fall inside the peak. This only works with *normalization* set to `per trace` or `counts`. As a check I simulated 70 % molecular traces with 0.4 nm plateaus pulled at 2 nm/s. The expected dwell time is then 0.7 x 0.2 s = 140 ms, and the fit gives 135-146 ms.
 
 The program remembers the last fit; the Flicker noise tab uses it for the peak window (9.3).
 
@@ -329,17 +330,13 @@ For gold in vacuum beta is about 20 per nm (one decade of conductance per \~0.1 
 
 ### 6.4 Junction statistics tab
 
-The 1D histogram tells you where the molecular peak is, but not how many traces it came from. A peak built from 90 % of the traces and one built from 10 % can look the same once you normalise per trace. The Junction statistics tab looks at the traces one at a time and asks three questions: did a molecule bridge the gap, for how long, and at what conductance? From the answers you get the junction yield (the fraction of traces with a molecular plateau, Kamenetska et al. 2009). You also see whether the yield or the conductance changed while you were measuring.
+The 1D histogram tells you where the molecular peak is, but not how many traces it came from. A peak made by 90 % of the traces and one made by 10 % can look almost the same once you normalise per trace. So this tab goes through the traces one by one and asks three questions: did a molecule bridge the gap, for how long, and at what conductance? The answers give you the junction yield, the fraction of traces with a molecular plateau (Kamenetska et al. 2009), and they also show whether the yield or the conductance drifted while you were measuring.
 
-**How a plateau is found.** A trace "forms a junction" if it stays flat inside the molecular window for at least *min plateau*. Flat means the local slope |d log G / dz| is below *max slope*. I added the slope test because without it every trace counts. A pure tunnelling trace falls through a two-decade window in about 0.1-0.2 nm, and with the plain `span` length from 6.1 that already looks like a short plateau. Tunnelling drops by beta / ln 10 decades per nm, so about 9 decades/nm for gold in vacuum and 4-5 in solvents. Molecular plateaus usually fall by well under one decade per nm. The default of 2 decades/nm sits between the two.
+A trace counts as a junction if it stays flat inside the molecular window for at least *min plateau*, where flat means the local slope |d log G / dz| is below *max slope*. The slope test is there because otherwise every trace counts. A pure tunnelling trace falls through a two-decade window in about 0.1-0.2 nm, and with the plain `span` length from 6.1 that already looks like a short plateau. Tunnelling drops by beta / ln 10 decades per nm, which is about 9 decades/nm for gold in vacuum and 4-5 in solvents, while molecular plateaus usually fall by well under one decade per nm. The default of 2 decades/nm sits in between.
 
-The slope at each point is the change in log G between z - w/2 and z + w/2, divided by w, where w is *slope over*. Points near the ends of a trace, where that interval doesn't fit, never count as flat.
+The slope at a point is the change in log G between z - w/2 and z + w/2, divided by w, with w set by *slope over*. Points too close to the ends of a trace for that interval to fit never count as flat.
 
-For each trace you get:
-
-- the flat length: the summed distance of all flat points inside the window,
-- the plateau conductance: the median log G of those flat points,
-- yes/no: does the flat length reach *min plateau*?
+For every trace this gives a flat length (the summed distance of all flat points inside the window), a plateau conductance (the median log G of those points), and a yes or no: does the flat length reach *min plateau*?
 
 | Setting | Meaning | Default |
 | --- | --- | --- |
@@ -351,9 +348,9 @@ For each trace you get:
 | traces per block | Consecutive traces grouped for the plots against trace number | 100 |
 | conductance bins | Bins of the plateau conductance histogram | 60 |
 
-Use peak from histogram fit sets the window to the fitted peak centre +/- 3 sigma (fit the peak in the Histograms tab first). Then click Calculate.
+Use peak from histogram fit sets the window to the fitted peak centre +/- 3 sigma, so fit the peak in the Histograms tab first. Then click Calculate.
 
-**Results.** The text under the button gives the number of traces with a plateau, the yield with its binomial standard error sqrt(p(1-p)/N), and the median plateau conductance and length. With at least three blocks it also gives the conductance drift in decades per 1000 traces (a straight-line fit to the block medians) and the range of the block yields. The plots are:
+The text under the button gives the number of traces with a plateau, the yield with its binomial standard error sqrt(p(1-p)/N), and the median plateau conductance and length. If there are at least three blocks, it also gives the conductance drift in decades per 1000 traces (a straight line through the block medians) and how far the block yields spread. The plots are:
 
 | Plot | What it shows |
 | --- | --- |
@@ -363,9 +360,9 @@ Use peak from histogram fit sets the window to the fitted peak centre +/- 3 sigm
 | Flat plateau length histogram | Flat length of every trace, with the threshold marked. A clear gap near the threshold means the setting is sensible |
 | Length vs conductance | One point per junction. A tilt shows that longer-stretched junctions sit at another conductance, e.g. two binding geometries |
 
-**Choosing the settings.** Look at the flat length histogram first. Tunnelling-only traces pile up near zero and molecular traces form a second hump. Put *min plateau* in the dip between them. If there is no dip, the yield depends on your threshold and you should say which one you used. On simulated data (12) with 70 % molecular traces I get 68.5 +/- 3.3 %, and with 30 % I get 29.0 +/- 3.2 %.
+To choose the settings, start with the flat length histogram. Tunnelling-only traces pile up near zero and the molecular traces form a second hump, so put *min plateau* in the dip between them. If there's no dip, the yield depends on where you put the threshold, and you should say which one you used. On simulated data (12) with 70 % molecular traces I get 68.5 +/- 3.3 %, and with 30 % I get 29.0 +/- 3.2 %.
 
-A note on the denominator: the yield is per accepted trace. Traces rejected in Data & Traces (4.4) aren't counted, so loose or strict cutting limits change it. Report the yield together with the cutting limits.
+Keep in mind that the yield is per accepted trace. Traces rejected in Data & Traces (4.4) aren't counted at all, so looser or stricter cutting limits change the yield. Always give it together with the cutting limits.
 
 ## 7. Correlation tab
 
@@ -506,18 +503,15 @@ n with its error, which estimator, how many traces were accepted, the frequency 
 
 As a check I ran it on simulated data with n = 1.5 and got n\_TSE = 1.52 +/- 0.02. After adding 5 % outlier windows, Theil-Sen gave 1.40 and OLS 1.33.
 
-The Rashid et al. 2025 preset was checked on five simulated data sets with 160 ms holds on the plateau (n = 1.5): it accepted 55-73 holds each and gave n = 1.53 on average (Morris preset on the same data: 1.59). The text also gives *minimum |Pearson r| on the scan grid*, which is how the paper reads n off the scan; it equals the OLS n to within the grid step.
+I tested the Rashid et al. 2025 preset on five simulated data sets with 160 ms holds on the plateau and n = 1.5. It accepted 55-73 holds per set and gave n = 1.53 on average; the Morris preset gave 1.59 on the same data. The text also reports the *minimum |Pearson r| on the scan grid*, which is how we read n off the scan in the paper. It agrees with the OLS n to within the grid step.
 
 ### 9.8 Events tab: flickering and mechanical switching
 
-A junction that switches between two states during a trace shows up as steps in G(t): short back-and-forth steps (flickering) or one large jump, for example when stretching converts one isomer into the other (a mechanical event). The Events tab finds these steps the way Rashid et al. (2025, SI 2.6) did:
+When a junction switches between two states during a trace, you see it as steps in G(t). These are either short back-and-forth steps (flickering) or one large jump, for example when stretching turns one isomer into the other (a mechanical event). The Events tab finds these steps the same way we did in Rashid et al. (2025, SI 2.6).
 
-1. G(t), in G0, goes through a Butterworth low-pass (200 Hz, order 2) and then a Savitzky-Golay filter (order 20, 20 side points, so 41 points). This removes the noise that would otherwise give false steps.
-2. The filtered trace is differentiated with the second-order central difference, dG/dt = (G[i+1] - G[i-1]) / (2 dt).
-3. Peaks of the derivative above a threshold are events: above the *mechanical threshold* (0.002) a mechanical event, between the *flicker threshold* (0.0007) and that a flicker.
-4. Events where the junction is outside the molecular range (*valid from / to log G*: metal contact, noise floor) are false positives and are dropped.
+First G(t), in G0, is smoothed with a Butterworth low-pass (200 Hz, order 2) and then a Savitzky-Golay filter (order 20 with 20 side points, so 41 points wide). Without this the noise alone would produce steps. The smoothed trace is then differentiated with the central difference dG/dt = (G[i+1] - G[i-1]) / (2 dt), and every peak of the derivative above a threshold is an event: a mechanical event above the *mechanical threshold* (0.002), and a flicker between the *flicker threshold* (0.0007) and that. Events that happen while the junction is outside the molecular range (*valid from / to log G*), so in metal contact or down at the noise floor, are false positives and get dropped.
 
-Each trace is then *mechanical* (at least one mechanical event), *flickering* (flickers only) or *quiet*.
+Each trace ends up as *mechanical* (at least one mechanical event), *flickering* (only flickers) or *quiet*.
 
 | Setting | Meaning | Default |
 | --- | --- | --- |
@@ -532,25 +526,25 @@ Each trace is then *mechanical* (at least one mechanical event), *flickering* (f
 | level before/after (ms) | The conductance before and after an event is the median over this time | 20 |
 | hold histogram: time bins, bins / decade | For the conductance-time histogram of the holds | 200, 30 |
 
-Three details of the original LabVIEW code aren't written in the paper, so I chose what LabVIEW does by default. Check them against your own settings:
+Three details of the original LabVIEW code aren't in the paper, so I went with what LabVIEW does by default. If your own settings were different, change these:
 
-- **dt.** LabVIEW's derivative takes dt as an input. With dt = 20 ms and 10 kHz data, the peak of dG/dt is about 2.2 times the step height (measured on synthetic steps), so the thresholds of 0.0007 and 0.002 correspond to steps of about 3 x 10^-4 and 9 x 10^-4 G0.
-- **Peak width.** LabVIEW's Peak Detector fits a quadratic over *width* points (50) and compares the fitted maximum with the threshold. That is *peak detection* = `quadratic fit`. `minimum width` instead keeps only peaks at least *width* samples wide at half height. Note that a 200 Hz low-pass makes derivative peaks only about 20-30 samples wide at 10 kHz, so `minimum width` with 50 rejects almost everything.
-- **Polarity.** The Peak Detector finds maxima only, so *count* = `rises`. A flicker up and back down is then counted once. Use `both` to count every step.
+- dt: LabVIEW's derivative takes dt as an input. With dt = 20 ms and 10 kHz data the peak of dG/dt is about 2.2 times the step height (I measured this on synthetic steps), so the thresholds of 0.0007 and 0.002 correspond to steps of roughly 3 x 10^-4 and 9 x 10^-4 G0.
+- Peak width: LabVIEW's Peak Detector fits a quadratic over *width* points (50) and compares the fitted maximum with the threshold. That's *peak detection* = `quadratic fit`. The other option, `minimum width`, only keeps peaks at least *width* samples wide at half height. Be careful with it: after a 200 Hz low-pass the derivative peaks are only 20-30 samples wide at 10 kHz, so `minimum width` with 50 throws out almost everything.
+- Polarity: the Peak Detector only finds maxima, hence *count* = `rises`, and a flicker up and back down counts once. Choose `both` if you want every step counted.
 
-scipy's own Savitzky-Golay coefficients fall apart at order 20 (they come out around 10^-17), so the program builds the filter from a QR decomposition in the Legendre basis instead. It matches scipy to 10^-14 at low order and stays exact at order 20.
+One technical note: scipy's own Savitzky-Golay coefficients fall apart at order 20 (they come out around 10^-17), so the program builds the filter from a QR decomposition in the Legendre basis instead. That matches scipy to 10^-14 at low order and stays exact at order 20.
 
-**Plots.** One example trace with the filtered signal and the events marked, its derivative with both thresholds, the share of quiet, flickering and mechanical traces, flickers per trace, and a transition map (log G before against log G after each event). With `holds` you also get the 2D conductance-time histogram of all holds, with the most probable log G at every time (a Gaussian fit per time bin) and its sigma as error bars. That is the plot the paper uses for the mechanical modulation (Fig. S23): hold, modulate the piezo with a square wave, and see how the most probable conductance follows.
+The plots show an example trace with the filtered signal and the events marked, its derivative with both thresholds, the share of quiet, flickering and mechanical traces, the number of flickers per trace, and a transition map of log G before against log G after each event. With `holds` you also get the 2D conductance-time histogram of all holds, with the most probable log G at each time (a Gaussian fit per time bin) and its sigma as error bars. That's the plot we used for the mechanical modulation in the paper (Fig. S23): hold the junction, move the piezo back and forth with a square wave, and watch the most probable conductance follow.
 
-On synthetic traces a 4 x 10^-4 G0 flicker at G ~ 10^-3 G0 is found as a flicker, a jump from 10^-6 to 1.6 x 10^-3 G0 as a mechanical event, and a flat trace with 3 % noise gives nothing.
+On synthetic traces it picks up a 4 x 10^-4 G0 flicker at G ~ 10^-3 G0 as a flicker and a jump from 10^-6 to 1.6 x 10^-3 G0 as a mechanical event, and finds nothing in a flat trace with 3 % noise.
 
 ## 10. I-V, EGaIn and Thermopower tabs
 
-This tab is for bias sweeps. It cuts a recording into forward and backward I-V curves, makes histograms of them and, if you want, fits a transport model to them (10.2, 10.3).
+These three tabs all deal with current against bias or temperature rather than conductance traces. The I-V tab (10.1-10.4) cuts a recording with bias sweeps into forward and backward I-V curves, makes histograms of them and, if you want, fits a transport model. The EGaIn tab (10.5) does the statistics of large-area junctions, and the Thermopower tab (10.6) gets the Seebeck coefficient from thermovoltages.
 
 ### 10.1 Finding the sweeps
 
-This first part cuts the recording into forward and backward curves and makes histograms of them. For that the bias has to be recorded over time, so you need a TDMS file with a bias channel or a text or Igor file with a *voltage column* (4.2). With constant bias you just get "No bias sweeps were found".
+For this the bias has to be recorded over time, so you need a TDMS file with a bias channel, or a text or Igor file with a *voltage column* (4.2). With a constant bias you just get "No bias sweeps were found".
 
 The bias is smoothed and its turning points found (peaks and valleys at least *min sweep amplitude* apart). Every monotonic piece between two turning points is one curve, forward if the bias goes up and backward if it goes down. The current of each curve is smoothed with a Savitzky-Golay filter and dI/dV is the ratio of the filtered derivatives of I and V.
 
@@ -564,46 +558,43 @@ The bias is smoothed and its turning points found (peaks and valleys at least *m
 | V bins, I bins | Resolution of the 2D histograms | 100, 100 |
 | log \|I\| histogram | Histograms log10 \|I\| instead of I | on |
 
-Top left you see up to 200 curves (forward blue, backward orange) with the averaged forward and backward curves. The other three plots are 2D histograms against V of log I, of log(G/G0) with G = I/V, and of log(dI/dV / G0). The curves are saved as V/I column pairs in `IV_DATA/IV_Curves_F.txt` and `IV_Curves_B.txt` (13).
+The top left plot shows up to 200 curves (forward blue, backward orange) together with the averaged forward and backward curves. The other three are 2D histograms against V of log I, of log(G/G0) with G = I/V, and of log(dI/dV / G0). The curves are saved as V/I column pairs in `IV_DATA/IV_Curves_F.txt` and `IV_Curves_B.txt` (13).
 
-The mean curves only use sweeps that cover the typical bias range. The half sweeps at the start and end of a recording are left out of the average, because they'd shrink the common range to nothing. They are still in the histograms and in the fits of single curves.
+Only sweeps that cover the typical bias range go into the mean curves. The half sweeps at the start and end of a recording would shrink the common range to almost nothing, so they're left out of the average, but they still show up in the histograms and in the fits of single curves.
 
 ### 10.2 Single-level model
 
-Most I-V curves of single-molecule junctions can be described by one molecular level. It sits at energy eps0 from the Fermi level of the electrodes and is broadened by its coupling Gamma to each electrode. The transmission is a Lorentzian, and at zero temperature the Landauer current has a closed form:
+Most I-V curves of single-molecule junctions can be described by a single molecular level, sitting at energy eps0 from the Fermi level of the electrodes and broadened by its coupling Gamma to each electrode. The transmission is then a Lorentzian, and at zero temperature the Landauer current has a closed form:
 
 ```latex
 I(V) = N\,G_0\,\Gamma \left[\arctan\frac{V/2 - \varepsilon(V)}{\Gamma} + \arctan\frac{V/2 + \varepsilon(V)}{\Gamma}\right], \qquad \varepsilon(V) = \varepsilon_0 + a V
 ```
 
-Energies are in eV and V in volts, so G0 times an energy in eV is directly a current in A. Both electrodes are coupled equally (Gamma_L = Gamma_R = Gamma), N is the number of molecules in parallel (keep it 1) and a describes an asymmetric junction where the level moves with the bias. At low bias the model gives G/G0 = N Gamma^2 / (eps0^2 + Gamma^2). This is the form used, for example, by Zotti et al. (2010) to compare anchoring groups.
+Energies are in eV and V in volts, so G0 times an energy in eV is directly a current in A. Both electrodes are coupled equally (Gamma_L = Gamma_R = Gamma), N is the number of molecules in parallel (keep it at 1 for single molecules), and a describes an asymmetric junction where the level moves with the bias. At low bias the model reduces to G/G0 = N Gamma^2 / (eps0^2 + Gamma^2). Zotti et al. (2010), for example, used this form to compare anchoring groups.
 
-**Finite temperature.** Above 0 K the Fermi functions of the leads smear the edges of the bias window. The general Landauer form is
+Above 0 K the Fermi functions of the leads smear out the edges of the bias window, and you need the general Landauer form
 
 ```latex
 I = \frac{2e}{h}\int dE\, T(E)\,[f_L(E) - f_R(E)], \qquad T(E) = \frac{\Gamma^2}{(E - \varepsilon)^2 + \Gamma^2}
 ```
 
-with f_L and f_R the Fermi functions at mu = +V/2 and -V/2. This T(E) is the same as 2 pi Gamma_L Gamma_R D(E) / Gamma_tot, with a Lorentzian density of states D(E) of width Gamma_tot = Gamma_L + Gamma_R, as written in Rashid et al. (2025). Gamma here is Gamma_L,R, the number in their Table S1. The program can do the integral in two ways:
+with f_L and f_R the Fermi functions at mu = +V/2 and -V/2. This T(E) is the same as 2 pi Gamma_L Gamma_R D(E) / Gamma_tot with a Lorentzian density of states D(E) of width Gamma_tot = Gamma_L + Gamma_R, which is how we wrote it in Rashid et al. (2025). Gamma here is Gamma_L,R, the number given in Table S1 of that paper.
 
-- `analytic`: the integral of the Lorentzian against a Fermi function has a closed form with the digamma function psi (formula below). It is exact and fast.
-- `energy grid`: the integral done numerically on an energy grid, as in Rashid et al. (2025, SI 2.4): -10 to 10 eV in steps of 0.02 meV. To keep this fast, T(E) is integrated once and the Fermi functions enter by one convolution (FFT) per evaluation.
-
-The closed form used by `analytic`:
+The program can do this integral in two ways. With `analytic` it uses the fact that a Lorentzian integrated against a Fermi function has a closed form in terms of the digamma function psi, which is exact and fast:
 
 ```latex
 \int T(E)\, f(E - \mu)\, dE = \pi\Gamma \left[\frac{1}{2} - \frac{1}{\pi}\, \mathrm{Im}\, \psi\!\left(\frac{1}{2} + \frac{\Gamma - i(\mu - \varepsilon)}{2\pi k_B T}\right)\right]
 ```
 
-The two agree to better than 10^-9 (checked at 0 and 300 K, eps0 = 1.1 eV, Gamma = 11.3 meV). The single curves are always fitted with the closed form. `energy grid` is used for the mean and most probable curves, starting from the closed-form result, so a grid fit takes under a second.
+With `energy grid` the integral is done numerically, the way we did it in the paper (Rashid et al. 2025, SI 2.4): from -10 to 10 eV in steps of 0.02 meV. To keep that fast, T(E) is integrated once and the Fermi functions come in through a single FFT convolution per evaluation. The two methods agree to better than 10^-9 (I checked at 0 and 300 K with eps0 = 1.1 eV and Gamma = 11.3 meV). Single curves are always fitted with the closed form. The grid is used for the mean and most probable curves and starts from the closed-form result, so even a grid fit takes less than a second.
 
-**Most probable curve.** Besides the mean forward and backward curves, the program builds the most probable I-V curve. It bins all curves by bias, fits a Gaussian to the current distribution in every bin and takes its centre, with sigma as the error bar. This is the blue line in Fig. S22 of Rashid et al. (2025), and it is less sensitive to a few odd curves than the mean. It is fitted too. *weight by 1/sigma* weights each bias bin by its spread.
+Besides the mean forward and backward curves, the program also builds the most probable I-V curve. It bins all curves by bias, fits a Gaussian to the current distribution in each bin and takes its centre, with sigma as the error bar. This is the blue line in Fig. S22 of our paper, and a few odd curves bother it much less than they bother the mean. It gets fitted as well; *weight by 1/sigma* weights each bias bin by its spread.
 
-**Preset: Rashid et al. 2025.** It sets 300 K, the energy grid (-10 to 10 eV, 0.02 meV), the Levenberg-Marquardt algorithm, Gamma_L = Gamma_R, no asymmetry and N = 1. The SI doesn't give the temperature, so 300 K is my assumption; change it if your measurement was at another one. On a model curve with the G1 values of their Table S1 (eps0 = 1.10 eV, Gamma = 11.3 meV, 300 K) the preset gives back 1.100 eV and 11.30 meV.
+The Rashid et al. 2025 preset sets 300 K, the energy grid (-10 to 10 eV, 0.02 meV), the Levenberg-Marquardt algorithm, Gamma_L = Gamma_R, no asymmetry and N = 1. The SI doesn't state the temperature, so 300 K is an assumption; change it if you measured at another temperature. On a model curve made with the G1 values from Table S1 (eps0 = 1.10 eV, Gamma = 11.3 meV, 300 K) the preset gets back 1.100 eV and 11.30 meV.
 
-**Ensembles.** *fit N too* lets the number of molecules float, for large-area junctions (the EGaIn tab uses it). N and Gamma are strongly correlated then: on a model curve with N = 10^4 and Gamma = 50 meV the fit gives N = 8.6 x 10^3 and Gamma = 54 meV, while eps0 comes back to 0.1 %. Report eps0 and treat N and Gamma with care.
+For large-area junctions, *fit N too* lets the number of molecules float (the EGaIn tab uses this). N and Gamma are then strongly correlated: on a model curve with N = 10^4 and Gamma = 50 meV the fit returns N = 8.6 x 10^3 and Gamma = 54 meV, while eps0 comes back within 0.1 %. So report eps0, and take N and Gamma with a grain of salt.
 
-Click Fit single-level model + TVS after Analyse I-V. The fit is a least-squares fit of I (scaled by its maximum), started from four values of eps0. The best one is kept. Every curve is fitted (up to *fit at most N single curves*), and so are the mean forward and backward curves.
+To run the fit, click Fit single-level model + TVS after Analyse I-V. It's a least-squares fit of I (scaled by its maximum), started from four values of eps0, and the best of the four is kept. Every single curve is fitted, up to *fit at most N single curves*, and so are the mean forward and backward curves.
 
 | Setting | Meaning | Default |
 | --- | --- | --- |
@@ -620,17 +611,13 @@ Click Fit single-level model + TVS after Analyse I-V. The fit is a least-squares
 | most probable: bias bins, current bins | Binning for the most probable curve | 40, 100 |
 | weight by 1/sigma | Weights for the most probable curve | off |
 
-Some things to keep in mind:
-
-- eps0 comes out as a positive number. The model can't tell HOMO from LUMO transport, because both give the same I-V. For that you need thermopower or theory.
-- When the bias range is well below eps0, the curve is almost linear plus a small cubic term. eps0 and Gamma are then strongly correlated, and the errors (from the fit covariance) get large. Look at the eps0 vs Gamma scatter: a long diagonal streak means the data can't separate the two.
-- The model assumes one level, and a level that doesn't depend on the bias beyond a V. At *temperature* 0 it also assumes eps0 and Gamma are much larger than kT (about 25 meV); otherwise set the temperature. If those assumptions don't hold, the model can still fit the curve nicely while eps0 and Gamma no longer mean what they seem to.
+A few things to keep in mind when you read the numbers. eps0 always comes out positive, because HOMO and LUMO transport give the same I-V; to tell them apart you need thermopower (10.6) or theory. When the bias stays well below eps0, the curve is nearly linear with a small cubic term, so eps0 and Gamma become strongly correlated and their errors (from the fit covariance) get large. The eps0 vs Gamma scatter shows this as a long diagonal streak, which means the data can't separate the two. Finally, the model assumes a single level that moves with the bias by no more than a V, and at *temperature* 0 it also assumes eps0 and Gamma are much larger than kT (about 25 meV); if they aren't, set the temperature. When these assumptions fail, the model can still fit the curve nicely, but eps0 and Gamma no longer mean what they seem to.
 
 ### 10.3 Transition voltage spectroscopy (TVS)
 
-If you plot ln(|I|/V^2) against 1/V (a Fowler-Nordheim plot), I-V curves of molecular junctions have a minimum. Beebe et al. (2006) introduced it as the transition voltage V_t. It is the same as the maximum of V^2/|I|. V_t needs no fitting and is less sensitive to noise than the curvature of I(V), which is why it is so widely used.
+Plot ln(|I|/V^2) against 1/V (a Fowler-Nordheim plot) and the I-V curves of molecular junctions show a minimum. Beebe et al. (2006) called the bias where it happens the transition voltage V_t; it's the same as the maximum of V^2/|I|. V_t needs no fitting and is less sensitive to noise than the curvature of I(V), which is why so many people use it.
 
-For each curve and each polarity the program averages I in 60 bias bins above *TVS: ignore |V| below*, finds the maximum of V^2/|I| and refines it with a parabola through the three highest points. If the maximum is at the edge of the measured range, the bias didn't go far enough, and that V_t is left empty.
+For each curve and each polarity the program averages I in 60 bias bins above *TVS: ignore |V| below*, finds the maximum of V^2/|I| and refines it with a parabola through the three highest points. If the maximum sits at the edge of the measured range, the bias simply didn't go far enough, and that V_t is left empty.
 
 In the single-level model with Gamma << eps0, the two transition voltages give eps0 and a in closed form (Baldea 2012):
 
@@ -638,9 +625,9 @@ In the single-level model with Gamma << eps0, the two transition voltages give e
 \varepsilon_0 = \frac{2\,|V_t^+ V_t^-|}{\sqrt{(V_t^+)^2 + (V_t^-)^2 + \frac{10}{3}|V_t^+ V_t^-|}}, \qquad a = \frac{(V_t^+ + V_t^-)\,\varepsilon_0}{4\,|V_t^+ V_t^-|}
 ```
 
-For a symmetric junction this reduces to eps0 = (sqrt(3)/2) V_t, about 0.87 V_t. If only one polarity has a V_t, that formula is used. I checked both against the exact model: for eps0 = 0.8 eV, Gamma = 10 meV and a = 0.1, the curves give V_t+ = 1.19 V and V_t- = -0.75 V, and back eps0 = 0.800 eV and a = 0.100.
+For a symmetric junction this reduces to eps0 = (sqrt(3)/2) V_t, about 0.87 V_t, and that's what is used if only one polarity has a V_t. I checked both formulas against the exact model: with eps0 = 0.8 eV, Gamma = 10 meV and a = 0.1 the curves give V_t+ = 1.19 V and V_t- = -0.75 V, and from those the formulas give back eps0 = 0.800 eV and a = 0.100.
 
-Comparing the eps0 from TVS with the eps0 from the fit is a useful check. If they disagree a lot, the curves probably aren't single-level-like (several levels, strong asymmetry, or heating at high bias).
+It's worth comparing the eps0 from TVS with the one from the fit. If they disagree a lot, the curves probably aren't single-level-like: there may be several levels, a strong asymmetry, or heating at high bias.
 
 ### 10.4 Plots and what to report
 
@@ -654,27 +641,23 @@ The fit and TVS add five plots to the I-V tab:
 | SLM parameters | eps0 against Gamma (log scale) for every fitted curve |
 | eps0 histogram | eps0 from the fits and from V_t |
 
-Report eps0 and Gamma with their spread over the single curves (the medians are in the text). Say whether a was fitted and give the bias range of the fit. For TVS, give both polarities. The numbers per curve are in `<name>_IV_models.txt`, the most probable curve with its fit in `<name>_IV_most_probable.txt`, and the summary in `<name>_IV_models_summary.txt` (13).
+When you report the results, give eps0 and Gamma with their spread over the single curves (the medians are in the text), say whether a was fitted, and give the bias range of the fit. For TVS, give both polarities. The numbers per curve are in `<name>_IV_models.txt`, the most probable curve with its fit in `<name>_IV_most_probable.txt`, and the summary in `<name>_IV_models_summary.txt` (13).
 
 ### 10.5 EGaIn (ensemble) tab
 
-Large-area junctions (EGaIn tips, CP-AFM, crossbars) measure many molecules at once and many junctions per sample. Their statistics differ from break junctions in one important way: the unit is the junction, not the sweep. A sample with 20 junctions and 20 sweeps each has 20 independent measurements, not 400. The tab follows the statistics of Reus et al. (2012), as implemented in GaussFit (Chiechi group) and in the EGaIn module of XMe (Hong group).
+Large-area junctions (EGaIn tips, CP-AFM, crossbars) measure many molecules at once, and you usually make many junctions per sample. Their statistics differ from break junctions in one important way: the unit is the junction, not the sweep. A sample with 20 junctions and 20 sweeps on each is 20 independent measurements, not 400. The tab follows the statistics of Reus et al. (2012), the same as GaussFit (Chiechi group) and the EGaIn module of XMe (Hong group).
 
-**Loading.** With *file layout* = `one junction per file`, every file is one junction: a column with the bias and one with the current (or J). With `column pairs V, I, V, I, ...` one file holds many junctions: columns 0 and 1 are the bias and current of the first junction, 2 and 3 of the second, and so on. The pairs may have different lengths (shorter ones end in empty cells), a header line is fine, and the junctions are named after the file with \_1, \_2, ... appended. Add files ... or Add folder ... makes a *data set*, normally one molecule or one sample. Enter a molecular length for each data set in the table (nm, angstrom or number of carbons, as long as all sets use the same unit) if you want beta. Add simulated makes fake data sets with known answers.
+There are two file layouts. With *file layout* = `one junction per file`, each file is one junction, with a column for the bias and one for the current (or J). With `column pairs V, I, V, I, ...` one file holds many junctions: columns 0 and 1 are the bias and current of the first junction, 2 and 3 of the second, and so on. The pairs can have different lengths (the shorter ones just end in empty cells), a header line is fine, and the junctions get the file name with \_1, \_2, ... appended. Add files ... or Add folder ... makes a *data set*, which is normally one molecule or one sample. If you want beta, type a molecular length for each data set into the table; nm, angstrom or the number of carbons all work, as long as every set uses the same unit. Add simulated makes fake data sets where you know the right answer.
 
-**What it does:**
+When you click Analyse all, the current is first turned into a current density J = I / A, with A = pi d^2 / 4 from the contact diameter or the area you typed in. A junction whose |J| ever reaches the *short threshold* is a short: it counts against the yield (working junctions / all junctions) and is left out of everything else. The bias is cut into sweeps where it turns around, and each sweep is put on a common bias grid (*bias grid step*), without 0 V, where log|J| makes no sense.
 
-1. J = I / A, with A = pi d^2 / 4 from the contact diameter, or the area you type in.
-2. A junction whose |J| ever reaches the *short threshold* is a short. It counts against the yield (working junctions / all junctions) and is left out.
-3. The bias is cut into sweeps where it turns around, and every sweep is put on a common bias grid (*bias grid step*). 0 V is left out, because log|J| is meaningless there.
-4. At every bias, the log10|J| values of all sweeps are histogrammed (*bins / decade*) and fitted with a Gaussian. The centre <log|J|> and width sigma_log are reported, as in Reus et al.
-5. The confidence interval uses the number of working junctions n_j as degrees of freedom (formula below).
-6. Rectification: sweeps are grouped into cycles that cover both polarities, and log R = log|J(+V)| - log|J(-V)| is histogrammed and fitted for every |V|.
-7. V_trans (10.3) for every cycle.
-8. Optionally the single-level model (10.2) is fitted to the Gaussian-mean J(V), with N free (molecules per cm^2 that carry the current).
-9. Fit beta: with two or more analysed data sets with lengths, log10 <|J|> at *report at bias* is fitted against the length d (formula below). Each point is weighted by the standard error of its mean, sigma_log / sqrt(n_j - 1). With more than two sets, the error is scaled up by the scatter of the points if that is larger. beta comes out per unit of the length you typed (Simeone et al. 2013 report 0.92 per carbon for alkanethiolates).
+At every bias, the log10|J| values of all sweeps are histogrammed (*bins / decade*) and fitted with a Gaussian, and its centre <log|J|> and width sigma_log are what you report, as in Reus et al. The confidence interval uses the number of working junctions n_j as the degrees of freedom (formula below), which is where the junction-not-sweep rule comes in.
 
-The confidence interval (step 5) and the length dependence (step 9) are
+For the rectification, sweeps are grouped into cycles that cover both polarities, and log R = log|J(+V)| - log|J(-V)| is histogrammed and fitted at every |V|. Each cycle also gets its V_trans (10.3). If you like, the single-level model (10.2) is fitted to the Gaussian-mean J(V), with N free (the number of molecules per cm^2 that carry the current).
+
+Fit beta needs at least two analysed data sets with lengths. It fits log10 <|J|> at *report at bias* against the length d (formula below), weighting each point by the standard error of its mean, sigma_log / sqrt(n_j - 1). With more than two sets the error is scaled up by the scatter of the points if that's larger. beta comes out per unit of the length you typed; Simeone et al. (2013) report 0.92 per carbon for alkanethiolates.
+
+The confidence interval and the length dependence are
 
 ```latex
 \mathrm{CI} = t_{1-\alpha/2,\; n_j - 1}\, \frac{\sigma_\mathrm{log}}{\sqrt{n_j - 1}}, \qquad \log_{10} |J| = \log_{10} J_0 - \frac{\beta\, d}{\ln 10}
@@ -693,40 +676,29 @@ The confidence interval (step 5) and the length dependence (step 9) are
 | report at bias (V) | Bias of the log\|J\| and R histograms and of beta | 0.5 |
 | single-level fit, temperature | Fit of the mean J(V) | on, 300 K |
 
-**Plots** (for the data set chosen in *show*): every sweep with <log|J|> +/- sigma_log, the 2D histogram of log|J| against bias, the log|J| histogram at the report bias with its Gaussian, the log R histogram, the V_trans histograms, the single-level fit and, after Fit beta, log|J| against length.
+The plots are for the data set chosen in *show*: every sweep with <log|J|> +/- sigma_log, the 2D histogram of log|J| against bias, the log|J| histogram at the report bias with its Gaussian, the log R histogram, the V_trans histograms, the single-level fit and, once you've clicked Fit beta, log|J| against length.
 
-**Checks.** On simulated sets of 30 junctions with sigma_log = 0.4, a rectification log R = 0.3 and beta = 0.9, the tab finds <log|J|> within its confidence interval of the truth, log R = 0.30 +/- 0.08, the shorts, and beta = 0.904 +/- 0.016. Over 20 repeats with three sets of 20 junctions, beta came out 0.92 with a scatter of 0.087 and an average reported error of 0.095. So the error bar is realistic: 65 % of the runs fall within 1 sigma, against 68 % expected.
+To check all this I made simulated sets of 30 junctions with sigma_log = 0.4, a rectification of log R = 0.3 and beta = 0.9. The tab finds <log|J|> within its confidence interval of the true value, log R = 0.30 +/- 0.08, all the shorts, and beta = 0.904 +/- 0.016. Repeating it 20 times with three sets of 20 junctions gave beta = 0.92 on average, with a scatter of 0.087 and an average reported error of 0.095. So the error bar is realistic: 65 % of the runs land within 1 sigma, where 68 % is expected.
 
-**What to report:** <log|J|> and sigma_log at a stated bias, the number of junctions and of sweeps, the yield, the contact area and how it was measured, and the confidence interval with alpha. The geometric contact area is not the electrical one (Simeone et al. 2013 estimate 10^-4 of it), so J0 is only comparable between data sets measured the same way.
+In a paper, give <log|J|> and sigma_log at a stated bias, the number of junctions and of sweeps, the yield, the contact area and how you measured it, and the confidence interval with alpha. Remember that the geometric contact area isn't the electrical one (Simeone et al. 2013 estimate the electrical area at 10^-4 of it), so J0 can only be compared between data sets measured the same way.
 
 ### 10.6 Thermopower tab
 
-A temperature difference across a molecular junction drives a thermoelectric voltage. Its sign and size give the Seebeck coefficient S, which tells whether the HOMO or the LUMO is closer to the Fermi level: S > 0 means hole transport through the HOMO, S < 0 electron transport through the LUMO. The tab does the standard analysis of Reddy et al. (2007) and Widawsky et al. (2012): you give the thermovoltage and the temperature, and it makes the histograms and the fit.
+Heat one electrode of a molecular junction and a thermoelectric voltage appears across it. Its sign and size give the Seebeck coefficient S, which tells you whether the HOMO or the LUMO is closer to the Fermi level: S > 0 means hole transport through the HOMO, S < 0 electron transport through the LUMO. This is exactly what the single-level fit can't tell you (10.2). The tab does the standard analysis of Reddy et al. (2007) and Widawsky et al. (2012): you give it the thermovoltage and the temperature, and it makes the histograms and the fit.
 
-**Input.** Text or Igor files with the thermoelectric voltage in one column and the temperature in another, one row per sample. A file is usually one trace (one junction), but a file can also hold traces at several temperatures, because the temperature is read per sample. The temperature column is either:
+The input is text or Igor files with the thermoelectric voltage in one column and the temperature in another, one row per sample. Usually a file is one trace, so one junction, but since the temperature is read for every sample, a file can just as well hold traces at several temperatures. The temperature column can hold the temperature difference dT itself, or the temperature of the heated electrode, in which case dT = T - *T reference* (the cold side, usually room temperature). If you don't have a temperature column at all, each data set gets one dT that you type in when you load it. An optional conductance column (G/G0 or log G/G0) lets you keep only the samples on the molecular plateau (*keep log G from / to*), and then S is also plotted against log G.
 
-- the temperature difference dT itself,
-- the temperature of the heated electrode, with dT = T - *T reference* (the cold side, e.g. room temperature), or
-- missing: then each data set gets one dT that you type in when you load it.
-
-An optional conductance column (G/G0 or log G/G0) lets you keep only the samples on the molecular plateau (*keep log G from / to*) and plots S against log G.
-
-**What it does:**
-
-1. V is converted to microvolt and divided by the *amplifier gain*. *invert voltage sign* flips it if your wiring measures the opposite polarity.
-2. The samples are grouped by dT in steps of *dT step*. With *histogram of* = `file means`, each file contributes one mean voltage per dT, i.e. one value per junction as in Reddy et al. With `samples`, every sample counts.
-3. At every dT the thermovoltage is histogrammed and fitted with a Gaussian: its centre is the most probable thermovoltage V(dT).
-4. V(dT) is fitted with a straight line, weighted by the error of each centre. The Seebeck coefficient follows from the slope:
+The voltage is converted to microvolts and divided by the *amplifier gain*; *invert voltage sign* flips it if your wiring measures the opposite polarity. The samples are then grouped by dT in steps of *dT step*. With *histogram of* = `file means` each file gives one mean voltage per dT, so one value per junction as in Reddy et al.; with `samples` every sample counts. At every dT the thermovoltage is histogrammed and fitted with a Gaussian, whose centre is the most probable thermovoltage V(dT). A straight line through V(dT), weighted by the error of each centre, gives the Seebeck coefficient from its slope:
 
 ```latex
 S = -\frac{dV}{d(\Delta T)} + S_\mathrm{electrode}
 ```
 
-5. For every sample (or file) with dT not 0, S_i = -V_i/dT_i + S_electrode is histogrammed and fitted too, and plotted against log G if a conductance column was given.
+On top of that, every sample (or file) with dT not 0 gets its own S_i = -V_i/dT_i + S_electrode, and these are histogrammed and fitted too, and plotted against log G if there's a conductance column.
 
-The error of each peak comes from resampling the files (bootstrap, *bootstrap* resamplings). The samples of one trace aren't independent, and a Gaussian fitted to a histogram scatters more than the plain standard error suggests. On simulated data (30 repeats, 20 junctions per dT, S = -6 uV/K) the mean S was -6.05 and 80 % of the results were within their error. So the error is honest, if slightly conservative.
+The error of each peak comes from a bootstrap over the files (*bootstrap* resamplings). That's needed because the samples of one trace aren't independent, and a Gaussian fitted to a histogram scatters more than the plain standard error would suggest. On simulated data (30 repeats, 20 junctions per dT, S = -6 uV/K) the mean S was -6.05 and 80 % of the results fell within their error, so the error is honest, if anything a little conservative.
 
-*S of the electrodes* is added to -dV/d(dT). With 0 (the default) S is relative to the electrode leads. Reddy et al. add the Seebeck coefficient of gold; enter the value for your electrode metal and temperature if you want the absolute junction value.
+*S of the electrodes* is added to -dV/d(dT). With the default of 0 you get S relative to the electrode leads. Reddy et al. add the Seebeck coefficient of gold; if you want the absolute value for the junction, enter the one for your electrode metal and temperature.
 
 | Setting | Meaning | Default |
 | --- | --- | --- |
@@ -743,11 +715,11 @@ The error of each peak comes from resampling the files (bootstrap, *bootstrap* r
 | S of the electrodes | Added to -dV/d(dT) | 0 uV/K |
 | bootstrap | Resamplings for the peak errors | 100 |
 
-**Plots:** the thermovoltage histograms of all dT with their Gaussians, the most probable V against dT with standard errors (black), the widths (grey) and the fitted line with S, the S histogram, and the 2D histogram of S against log G.
+The plots show the thermovoltage histograms at every dT with their Gaussians, the most probable V against dT with its standard errors (black) and widths (grey) and the fitted line with S, the S histogram, and the 2D histogram of S against log G.
 
-**Checks.** On simulated traces with S = 12 and -8 uV/K, the tab gives 11.9 +/- 0.4 and -8.1 +/- 0.4. Through real files (V in mV, the hot-side temperature, G in G0, a conductance window) S = -6 comes back as -5.9 +/- 0.5.
+On simulated traces with S = 12 and -8 uV/K the tab gives 11.9 +/- 0.4 and -8.1 +/- 0.4. Written out to files the way a real setup would (V in mV, the hot-side temperature, G in G0) and read back with a conductance window, S = -6 comes back as -5.9 +/- 0.5.
 
-**What to report:** S with its error, the dT values and the number of junctions at each, whether samples or file means were used, the conductance window, and whether an electrode Seebeck coefficient was added.
+When you report S, give its error, the dT values and how many junctions you measured at each, whether you used samples or file means, the conductance window, and whether you added an electrode Seebeck coefficient.
 
 ## 11. Piezo modulation tab
 

@@ -133,19 +133,20 @@
 \begin{document}
 \maketitle
 
-GZero 1.3 adds three methods that are standard in break-junction papers:
-the junction yield with per-trace plateau statistics, single-level model
-fits of I-V curves, and transition voltage spectroscopy. GZero 1.4 adds
-the analysis methods of Rashid et al., JACS 2025 (finite-temperature
-energy-grid fit, noise protocol, event detection, dwell time) and an
-EGaIn ensemble tab built after the Hong (XMe) and Chiechi (GaussFit)
-codes.
+This note describes what changed in GZero 1.3 and 1.4, why, and how I
+checked it. Version 1.3 adds three things that most break-junction
+papers report and GZero couldn't do yet: the junction yield with
+per-trace plateau statistics, single-level model fits of I-V curves, and
+transition voltage spectroscopy. Version 1.4 brings in the analysis from
+our own paper (Rashid et al., JACS 2025): the finite-temperature
+energy-grid fit, the noise protocol, event detection and the dwell time.
+It also adds two tabs for other kinds of measurements, EGaIn ensemble
+junctions and thermopower, and lets GZero read TDMS files of several GB.
 
 \hypertarget{whats-new}{%
 \section{What's new}\label{whats-new}}
 
-Each new method answers a question the existing tabs couldn't. All of
-them run on data GZero already loads, so no new file formats are needed.
+Each addition answers a question the existing tabs couldn't.
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\columnwidth - 6\tabcolsep) * \real{0.2124}}
@@ -177,24 +178,28 @@ Fowler-Nordheim plot turn over, and what level position does that imply?
 & \texttt{gzero/\allowbreak{}ivmodels.py} \\
 Events & New tab & Which traces flicker or switch mechanically? &
 \texttt{gzero/\allowbreak{}events.py} \\
-EGaIn (ensemble) & New tab & Statistics of large-area junctions, yield,
-rectification and $\beta$ & \texttt{gzero/\allowbreak{}egain.py} \\
+EGaIn (ensemble) & New tab & What are the statistics of large-area
+junctions: yield, rectification and $\beta$? &
+\texttt{gzero/\allowbreak{}egain.py} \\
 Thermopower & New tab & What is the Seebeck coefficient, and is
 transport through the HOMO or the LUMO? &
 \texttt{gzero/\allowbreak{}thermo.py} \\
+Large TDMS files & Data \& Traces tab & Can a recording of more than 1
+GB be analysed without running out of memory? &
+\texttt{gzero/\allowbreak{}streaming.py} \\
 \end{longtable}
 
-One existing function got a fix along the way. The averaged I-V curve
+I also fixed one existing function on the way. The averaged I-V curve
 used to take the overlap of all sweeps, so the half sweeps at the start
-and end of a recording could shrink it to nothing. It now averages only
-sweeps that cover the typical bias range.
+and end of a recording could shrink it to almost nothing. It now only
+averages sweeps that cover the typical bias range.
 
 \hypertarget{papers-reviewed}{%
 \section{Papers reviewed}\label{papers-reviewed}}
 
-I went through the methods sections of commonly cited break-junction
-papers and looked for analyses people report routinely that GZero didn't
-have yet. Four papers define what was added in 1.3:
+I went through the methods sections of the break-junction papers people
+cite most and looked for analyses that are routinely reported but that
+GZero didn't have. Four papers shaped version 1.3:
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2116}}
@@ -236,97 +241,76 @@ and the fit can be compared curve by curve \\
 \end{longtable}
 
 The 2D correlation, clustering and flicker-noise methods from earlier
-papers were already in GZero. I left out methods that need hardware most
-setups don't have, like thermopower and shot noise.
+papers were already in GZero. Thermopower came later, in 1.4; shot noise
+is still out, because it needs hardware most setups don't have.
 
 \hypertarget{junction-statistics}{%
 \section{Junction statistics}\label{junction-statistics}}
 
 A trace counts as a molecular junction if it stays flat inside the
-molecular window for at least 0.1 nm. The yield is the fraction of
+molecular window for at least 0.1 nm, and the yield is the fraction of
 traces that do.
 
-The tricky part is ``flat''. A trace that only tunnels still passes
+The tricky word is ``flat''. A trace that only tunnels still passes
 through a two-decade window in about 0.1-0.2 nm, so a plain
-length-in-window test counts almost every trace. GZero therefore checks
-the local slope at each point:
+length-in-window test would count almost every trace. GZero therefore
+looks at the local slope at each point:
 
 \[
 s(z) = \frac{|\log G(z + w/2) - \log G(z - w/2)|}{w}
 \]
 
-w is 0.05 nm by default. Tunnelling falls at $\beta$ / ln 10 decades per
-nm: about 9 for gold in vacuum and 4-5 in solvents. Molecular plateaus
-usually fall by well under 1 decade per nm. A point counts as flat below
-2 decades/nm, which sits between the two.
+with w = 0.05 nm by default. Tunnelling falls by $\beta$ / ln 10 decades
+per nm, which is about 9 for gold in vacuum and 4-5 in solvents, while
+molecular plateaus usually fall by well under 1 decade per nm. A point
+counts as flat below 2 decades/nm, in between the two.
 
-Per trace you get three numbers:
+For every trace this gives a flat length (the summed distance of the
+flat points inside the window), a plateau conductance (the median log G
+of those points) and a yes or no: is the flat length at least \emph{min
+plateau}? From these the tab works out the yield p with its binomial
+error sqrt(p(1-p)/N), the median plateau conductance and length, and the
+drift in decades per 1000 traces, which is a straight line through the
+medians of blocks of 100 traces. It plots the plateau conductance
+histogram, conductance and yield against trace number, the flat-length
+histogram with the threshold marked, and length against conductance.
 
-\begin{itemize}
-\tightlist
-\item
-  \textbf{flat length}: summed distance of the flat points inside the
-  window
-\item
-  \textbf{plateau conductance}: median log G of those points
-\item
-  \textbf{junction yes/no}: flat length of at least \emph{min plateau}
-\end{itemize}
-
-From these the tab gives the yield p with its binomial error
-sqrt(p(1-p)/N), the median plateau conductance and length, and a drift
-in decades per 1000 traces. The drift is a straight line fitted to the
-block medians, with 100 traces per block by default. The five plots are
-the plateau conductance histogram, conductance against trace number,
-yield against trace number, the flat-length histogram with the threshold
-marked, and length against conductance.
-
-Use peak from histogram fit sets the window to the fitted peak +/- 3
-$\sigma$. Then look at the flat-length histogram. Tunnelling traces pile
-up near zero and molecular ones form a second hump, and the threshold
-belongs in the dip between them.
+In practice, Use peak from histogram fit sets the window to the fitted
+peak +/- 3 $\sigma$. Then have a look at the flat-length histogram:
+tunnelling traces pile up near zero, molecular ones form a second hump,
+and the threshold belongs in the dip between them.
 
 \hypertarget{single-level-model}{%
 \section{Single-level model}\label{single-level-model}}
 
 The fit describes each I-V curve with one molecular level at energy
-$\varepsilon_0$ from the Fermi level, broadened by the coupling $\Gamma$
-to each electrode. At zero temperature the Landauer current through a
-Lorentzian transmission has a closed form:
+$\varepsilon_0$ from the Fermi level, broadened by its coupling $\Gamma$
+to each electrode. At zero temperature the Landauer current through the
+resulting Lorentzian transmission has a closed form:
 
 \[
 I(V) = N G_0 \Gamma \left[\arctan\frac{V/2 - \varepsilon(V)}{\Gamma} + \arctan\frac{V/2 + \varepsilon(V)}{\Gamma}\right], \quad \varepsilon(V) = \varepsilon_0 + aV
 \]
 
 Energies are in eV and V in volts, so $G_0$ times an energy in eV is
-directly a current in amperes. Both electrodes are coupled equally. N is
-the number of molecules in parallel and stays at 1. a lets the level
-move with the bias in an asymmetric junction; it is 0 unless you tick
-\emph{fit asymmetry a}. At low bias the model gives G/$G_0$ = $\Gamma^2$
-/ ($\varepsilon_0^2$ + $\Gamma^2$).
+directly a current in amperes. Both electrodes are coupled equally, and
+N, the number of molecules in parallel, stays at 1. The parameter a lets
+the level move with the bias in an asymmetric junction; it is 0 unless
+you tick \emph{fit asymmetry a}. At low bias the model reduces to
+G/$G_0$ = $\Gamma^2$ / ($\varepsilon_0^2$ + $\Gamma^2$).
 
-How the fit works:
-
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\tightlist
-\item
-  The current is scaled by its largest value so all curves weigh the
-  same.
-\item
-  A least-squares fit starts from four guesses of $\varepsilon_0$ (0.4,
-  0.8, 1.5 and 3 times the largest bias). Each guess gets a $\Gamma$
-  that matches the measured low-bias conductance.
-\item
-  The fit with the smallest residual is kept. Errors come from the fit
-  covariance, and $R^{2}$ is reported.
-\item
-  This is done for every curve (up to 500), for the mean forward and
-  backward curves, and for the most probable curve.
-\end{enumerate}
+The current is first scaled by its largest value, so that every curve
+weighs the same. A least-squares fit is then started from four guesses
+of $\varepsilon_0$ (0.4, 0.8, 1.5 and 3 times the largest bias), each
+with a $\Gamma$ that matches the measured low-bias conductance, and the
+one with the smallest residual wins. Errors come from the fit
+covariance, and $R^{2}$ is reported as well. This runs for every curve
+(up to 500), for the mean forward and backward curves, and for the most
+probable curve.
 
 The model can't tell HOMO from LUMO transport, because both give the
-same I-V. $\varepsilon_0$ is therefore reported as a positive number.
+same I-V, so $\varepsilon_0$ is reported as a positive number. The
+thermopower tab is the way to settle the sign.
 
 \hypertarget{transition-voltage-spectroscopy}{%
 \section{Transition voltage
@@ -334,13 +318,13 @@ spectroscopy}\label{transition-voltage-spectroscopy}}
 
 The transition voltage $V_t$ is where $V^{2}$/|I| peaks, which is the
 same as the minimum of the Fowler-Nordheim plot, ln(|I|/$V^{2}$) against
-1/V. It needs no fit, which is why so many papers report it.
+1/V. It needs no fit, and that's why so many papers report it.
 
 For each curve and polarity GZero averages the current in 60 bias bins
-above 0.05 V and finds the largest $V^{2}$/|I|. It then refines that
-point with a parabola through it and its two neighbours. If the maximum
-sits at the end of the sweep, the bias never reached $V_t$, and the
-value is left empty rather than guessed.
+above 0.05 V, finds the largest $V^{2}$/|I| and refines it with a
+parabola through that point and its two neighbours. If the maximum sits
+at the end of the sweep, the bias never reached $V_t$, and the value is
+left empty rather than guessed.
 
 In the single-level model with $\Gamma$ much smaller than
 $\varepsilon_0$, the two polarities give the level position and the
@@ -351,20 +335,20 @@ asymmetry exactly (Baldea 2012):
 \]
 
 For a symmetric junction this reduces to $\varepsilon_0$ = (sqrt(3)/2)
-$V_t$, about 0.87 $V_t$. The a formula follows from the same
-stationarity condition and was checked numerically against the exact
+$V_t$, about 0.87 $V_t$. The formula for a follows from the same
+stationarity condition, and I checked it numerically against the exact
 model (next section). Comparing the $\varepsilon_0$ from TVS with the
-$\varepsilon_0$ from the fit is a quick test of whether a single level
-describes the curves at all.
+one from the fit is a quick way to see whether a single level describes
+the curves at all.
 
 \hypertarget{validation-of-the-1.3-methods}{%
 \section{Validation of the 1.3
 methods}\label{validation-of-the-1.3-methods}}
 
-On data with known answers, every new method recovers the true value
-within its error. The SLM and TVS rows are model curves with 2 \% noise.
-The yield rows are GZero's own simulator going through the normal trace
-detection.
+On data where the answer is known, every new method gets the true value
+back within its error. The SLM and TVS rows use model curves with 2 \%
+noise; the yield rows use GZero's own simulator, going through the
+normal trace detection.
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.2837}}
@@ -399,17 +383,18 @@ Junction yield, 200 traces & 30 \% & 29.0 +/- 3.2 \% \\
 Plateau conductance & log G -3.5 & median -3.55 \\
 \end{longtable}
 
-The slight shift of the plateau conductance comes from the simulated
-plateau slope (0.3 decades/nm), which pulls the median a little below
-the plateau's start.
+The small shift in the plateau conductance comes from the slope of the
+simulated plateaus (0.3 decades/nm), which pulls the median a little
+below where the plateau starts.
 
 \hypertarget{version-1.4-methods-from-rashid-et-al.-2025}{%
 \section{Version 1.4: methods from Rashid et
 al.~2025}\label{version-1.4-methods-from-rashid-et-al.-2025}}
 
-Every analysis section of the SI of
+Every analysis in the SI of our paper,
 \href{https://doi.org/10.1021/jacs.4c13531}{Rashid et al., JACS 147, 830
-(2025)} is now in GZero, except the DFT and transport calculations.
+(2025)}, is now in GZero. Only the DFT and transport calculations are
+not.
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.1614}}
@@ -446,17 +431,17 @@ Events tab \\
 Histograms tab, with every peak fit \\
 \end{longtable}
 
-At finite temperature the Landauer integral is evaluated either on the
-energy grid of the paper or with the exact closed form, which uses the
+At finite temperature the Landauer integral is done either on the energy
+grid we used in the paper or with the exact closed form, which uses the
 digamma function psi:
 
 \[
 \int T(E)\, f(E - \mu)\, dE = \pi\Gamma \left[\frac{1}{2} - \frac{1}{\pi}\, \mathrm{Im}\, \psi\!\left(\frac{1}{2} + \frac{\Gamma - i(\mu - \varepsilon)}{2\pi k_B T}\right)\right]
 \]
 
-The two agree to $10^{-9}$. Fits therefore start from the closed form
-and the grid only polishes, which brings a grid fit down from 50 s to
-under 1 s.
+The two agree to $10^{-9}$. So the fits start from the closed form and
+the grid only polishes the result, which brings a grid fit down from 50
+s to under 1 s.
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.4309}}
@@ -483,99 +468,79 @@ Noise preset, 5 simulated sets, holds on the plateau & n = 1.5 & 1.53
 Dwell time, 70 \% molecular, 0.4 nm at 2 nm/s & 140 ms & 135-146 ms \\
 \end{longtable}
 
-The SI gives no temperature, so the preset assumes 300 K. Change it if
-your measurements ran at another temperature.
+The SI doesn't give the temperature, so the preset assumes 300 K. Change
+it if you measured at another temperature.
 
 \hypertarget{events-tab}{%
 \section{Events tab}\label{events-tab}}
 
-The tab finds flickering and mechanical switching in G(t) with the four
-steps of SI 2.6, and classifies each trace as mechanical, flickering or
-quiet.
+The tab finds flickering and mechanical switching in G(t) the way SI 2.6
+describes, and sorts every trace into mechanical, flickering or quiet.
+G(t), in $G_0$, is smoothed with a 200 Hz, order 2 Butterworth low-pass,
+run forwards and backwards so the events don't shift in time, and then
+with a Savitzky-Golay filter of order 20 over 41 points. scipy's own
+coefficients collapse to about $10^{-17}$ at that order, so GZero builds
+the filter from a QR decomposition in the Legendre basis instead, which
+matches scipy to $10^{-14}$ at low order. The smoothed trace is
+differentiated with a central difference, and peaks of dG/dt above
+0.0007 are flickers, above 0.002 mechanical events. Events while the
+junction is outside the molecular log G range are dropped as false
+positives.
 
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\tightlist
-\item
-  Butterworth low-pass, 200 Hz, order 2, applied forwards and backwards
-  so events aren't shifted in time.
-\item
-  Savitzky-Golay smoothing, order 20 over 41 points. scipy's own
-  coefficients collapse to about $10^{-17}$ at this order, so GZero
-  builds the filter from a Legendre-basis QR. It matches scipy to
-  $10^{-14}$ at low order.
-\item
-  Second-order central derivative dG/dt with G in $G_0$.
-\item
-  Peaks above 0.0007 are flickers and above 0.002 mechanical events.
-  Events outside the molecular log G range are dropped as false
-  positives.
-\end{enumerate}
-
-The plots are an example trace with the events marked, its derivative
-with both thresholds, the share of each trace class, flickers per trace,
+The plots show an example trace with its events, its derivative with
+both thresholds, the share of each kind of trace, flickers per trace,
 and a before/after transition map. With holds you also get the
 conductance-time histogram with the most probable G.
 
-\textbf{Three choices to confirm.} The SI doesn't pin these down, so
-GZero copies LabVIEW's defaults:
+Three details aren't pinned down in the SI, so GZero does what LabVIEW
+does by default. They're worth checking against the original VI:
 
 \begin{itemize}
 \tightlist
-\item[$\square$]
-  \textbf{dt = 20 ms is LabVIEW's dt input}, so dG/dt = (G{[}i+1{]} -
-  G{[}i-1{]}) / (2 x 0.02 s). The thresholds then correspond to steps of
-  about 3 x $10^{-4}$ $G_0$ (flicker) and 9 x $10^{-4}$ $G_0$
-  (mechanical), since the dG/dt peak is about 2.2 times the step.
-\item[$\square$]
-  \textbf{``Width 50'' is the Peak Detector's quadratic-fit window}, not
-  a minimum peak width. Read as a minimum width at half height, it
-  rejects almost every step, because 200 Hz-filtered steps give
-  derivative peaks only 20-30 samples wide at 10 kHz. Both readings are
-  selectable.
-\item[$\square$]
-  \textbf{Only rises are counted} (Peak Detector default), so a flicker
-  up and back counts once. \emph{Count = both} counts every step.
+\item
+  The 20 ms is LabVIEW's dt input, so dG/dt = (G{[}i+1{]} - G{[}i-1{]})
+  / (2 x 0.02 s). Since the dG/dt peak is about 2.2 times the step, the
+  thresholds then correspond to steps of about 3 x $10^{-4}$ $G_0$
+  (flicker) and 9 x $10^{-4}$ $G_0$ (mechanical).
+\item
+  ``Width 50'' is the window of the Peak Detector's quadratic fit, not a
+  minimum peak width. Read as a minimum width at half height it would
+  reject almost every step, because after the 200 Hz filter the
+  derivative peaks are only 20-30 samples wide at 10 kHz. Both readings
+  can be selected.
+\item
+  Only rises are counted, as in the Peak Detector, so a flicker up and
+  back counts once. \emph{Count = both} counts every step.
 \end{itemize}
 
-On synthetic steps a 4 x $10^{-4}$ $G_0$ flicker at $10^{-3}$ $G_0$ is
+On synthetic steps, a 4 x $10^{-4}$ $G_0$ flicker at $10^{-3}$ $G_0$ is
 found as a flicker, a jump from $10^{-6}$ to 1.6 x $10^{-3}$ $G_0$ as
 mechanical, and a flat trace with 3 \% noise gives nothing.
 
 \hypertarget{egain-ensemble-tab}{%
 \section{EGaIn ensemble tab}\label{egain-ensemble-tab}}
 
-Large-area junctions are analysed per junction, not per sweep. 20
+Large-area junctions are analysed per junction, not per sweep: 20
 junctions with 20 sweeps each are 20 independent measurements, not 400.
 The tab follows \href{https://doi.org/10.1021/jp210445y}{Reus et
-al.~2012}, as XMe and GaussFit also do.
+al.~2012}, as XMe and GaussFit do.
 
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\tightlist
-\item
-  Each file is one junction. J = I / A, with A from the contact diameter
-  (XMe's approach) or typed in.
-\item
-  A junction whose \textbar J\textbar{} reaches the short threshold (100
-  A/cm2) is a short. The yield is working junctions over all junctions.
-\item
-  Sweeps go onto a common bias grid. At each bias,
-  log10\textbar J\textbar{} is histogrammed and fitted with a Gaussian
-  to give the centre and $\sigma_\mathrm{log}$.
-\item
-  The confidence interval uses the number of junctions $n_j$ as degrees
-  of freedom (GaussFit's convention); formula below.
-\item
-  Also computed: log R = log\textbar J(+V)\textbar{} -
-  log\textbar J(-V)\textbar{} per cycle, $V_\mathrm{trans}$ per cycle,
-  and a single-level fit of the mean J(V) with free N.
-\item
-  Fit $\beta$ across data sets with typed-in lengths d (formula below).
-  Each point is weighted by the standard error of its mean
-  (\href{https://doi.org/10.1021/ja408652h}{Simeone et al.~2013} report
-  0.92 per carbon).
-\end{enumerate}
+A file is either one junction, with the bias and current columns chosen
+in the settings, or many junctions stored as column pairs V, I, V, I,
+\ldots, which may differ in length. The current becomes J = I / A, with
+A from the contact diameter (as in XMe) or typed in. A junction whose
+\textbar J\textbar{} reaches the short threshold (100 A/cm2) is a short,
+and the yield is working junctions over all junctions. The sweeps go
+onto a common bias grid, and at each bias log10\textbar J\textbar{} is
+histogrammed and fitted with a Gaussian, which gives the centre and
+$\sigma_\mathrm{log}$. The confidence interval uses the number of
+junctions $n_j$ as degrees of freedom, as GaussFit does. The tab also
+works out log R = log\textbar J(+V)\textbar{} -
+log\textbar J(-V)\textbar{} and $V_\mathrm{trans}$ per cycle, and fits
+the single-level model to the mean J(V) with N free. Across data sets
+with lengths d, it fits $\beta$, weighting each point by the standard
+error of its mean (\href{https://doi.org/10.1021/ja408652h}{Simeone et
+al.~2013} report 0.92 per carbon):
 
 \[
 \mathrm{CI} = t_{1-\alpha/2,\; n_j - 1}\, \frac{\sigma_\mathrm{log}}{\sqrt{n_j - 1}}, \qquad \log_{10} |J| = \log_{10} J_0 - \frac{\beta\, d}{\ln 10}
@@ -604,13 +569,9 @@ CI \\
 $\beta$ error coverage, 20 repeats & 68 \% within 1 $\sigma$ & 65 \% \\
 \end{longtable}
 
-The first version weighted $\beta$ by $\sigma_\mathrm{log}$ and claimed
-errors 3 times too small. Weighting by the standard error fixed that,
-which is what the coverage row shows.
-
-\textbf{File layouts.} A file is either one junction (bias and current
-columns chosen in the settings) or many junctions as column pairs V, I,
-V, I, \ldots{} Pairs may differ in length.
+My first version weighted $\beta$ by $\sigma_\mathrm{log}$ and claimed
+errors three times too small. Weighting by the standard error fixed
+that, which is what the coverage row shows.
 
 \hypertarget{thermopower-tab}{%
 \section{Thermopower tab}\label{thermopower-tab}}
@@ -618,31 +579,23 @@ V, I, \ldots{} Pairs may differ in length.
 The tab takes the thermoelectric voltage and the temperature (or
 temperature difference) of every sample and follows
 \href{https://doi.org/10.1126/science.1137149}{Reddy et al.~2007} and
-\href{https://doi.org/10.1021/nl203634m}{Widawsky et al.~2012}:
-
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\tightlist
-\item
-  Group the samples (or the file means, one per junction) by dT and fit
-  a Gaussian to the thermovoltage histogram at every dT.
-\item
-  Fit the most probable voltage against dT with a straight line; the
-  slope gives S (formula below). S \textgreater{} 0 means hole transport
-  (HOMO), S \textless{} 0 electron transport (LUMO).
-\item
-  Histogram S\_i = -V\_i/dT\_i + S\_electrode of every sample, and plot
-  it against log G when a conductance column is given.
-\end{enumerate}
+\href{https://doi.org/10.1021/nl203634m}{Widawsky et al.~2012}. The
+temperature column can hold dT, or the hot-side temperature (then dT = T
+- T\_ref), or be missing, in which case each data set gets its own dT.
+The samples, or the file means (one per junction), are grouped by dT,
+and a Gaussian is fitted to the thermovoltage histogram at every dT. A
+straight line through the most probable voltages gives S from its slope:
 
 \[
 S = -\frac{dV}{d(\Delta T)} + S_\mathrm{electrode}
 \]
 
-The error of each peak comes from a bootstrap over the files, because
-the samples of one trace aren't independent. The temperature column can
-hold dT, the hot-side temperature (dT = T - T\_ref), or be absent, in
-which case each data set gets its own dT.
+S \textgreater{} 0 means hole transport through the HOMO and S
+\textless{} 0 electron transport through the LUMO. S\_i = -V\_i/dT\_i +
+S\_electrode of every sample is histogrammed too, and plotted against
+log G when there is a conductance column. The error of each peak comes
+from a bootstrap over the files, because the samples within one trace
+aren't independent.
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\columnwidth - 4\tabcolsep) * \real{0.3869}}
@@ -668,11 +621,25 @@ Error coverage, 30 repeats & 68 \% within 1 $\sigma$ & 80 \% (slightly
 conservative) \\
 \end{longtable}
 
+\hypertarget{large-tdms-files}{%
+\section{Large TDMS files}\label{large-tdms-files}}
+
+Converting a 1 GB TDMS file in one go needs several GB of memory, since
+every step makes another array as long as the file. Files above 300 MB
+are therefore read in pieces of 2 minutes. Loading keeps only a min/max
+overview for the plot. Cutting the traces reads each piece with a 60 s
+margin on both sides and keeps only the traces and holds that start
+inside the piece, so a trace crossing a border is found once and in
+full. On a simulated recording this gives exactly the same traces as
+reading the whole file, and the self-test checks that. A 1.29 GB file
+(90 minutes at 10 kHz) now loads in 2.8 s and needs 0.7 GB of memory at
+most, against 15.6 s and 4.4 GB before.
+
 \hypertarget{open-source-code-reviewed}{%
 \section{Open-source code reviewed}\label{open-source-code-reviewed}}
 
-Two public codes cover the same ground and were read in full for their
-EGaIn and I-V methods.
+Two public codes cover the same ground, and I read both in full for
+their EGaIn and I-V methods.
 
 \begin{longtable}[]{@{}
   >{\raggedright\arraybackslash}p{(\columnwidth - 8\tabcolsep) * \real{0.2360}}
@@ -709,9 +676,9 @@ Junction-based CI, rectification and $V_\mathrm{trans}$ per cycle.
 Methods only: GPL code can't go into Apache-licensed GZero \\
 \end{longtable}
 
-GZero already covers the other Hong-group analyses in XMe: correlation,
-spectral clustering and flicker noise. Thermopower and electrochemical
-gating need measurement types GZero doesn't read yet.
+Of the other Hong-group analyses in XMe, GZero already had correlation,
+spectral clustering and flicker noise, and thermopower is in now.
+Electrochemical gating needs a measurement type GZero doesn't read yet.
 
 \hypertarget{sources}{%
 \section{Sources}\label{sources}}
@@ -719,7 +686,7 @@ gating need measurement types GZero doesn't read yet.
 Code: \href{https://github.com/arman-rashid/GZero}{arman-rashid/GZero},
 release v1.4. The full method description is in the user manual
 (\texttt{docs/\allowbreak{}User\_\allowbreak{}Manual.pdf}), sections
-5.2, 6.4, 9.5, 9.8 and 10.2-10.6, references 26-37.
+4.7, 5.2, 6.4, 9.5, 9.8 and 10.1-10.6, references 26-37.
 
 \begin{itemize}
 \tightlist
