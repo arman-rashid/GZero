@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to release (e.g. v1.4); created on the chosen branch if it doesn't exist"
+        description: "Tag to release (e.g. v1.5); created on the chosen branch if it doesn't exist"
         required: true
       recreate:
         description: "Delete an existing release and tag of that name first (to rebuild it)"

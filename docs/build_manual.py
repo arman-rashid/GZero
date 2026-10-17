@@ -1,5 +1,5 @@
 """Makes the PDFs in docs/ out of their Markdown sources with pandoc and LaTeX:
-User_Manual.md -> User_Manual.pdf and GZero_1.4_methods.md -> GZero_1.4_methods.pdf.
+User_Manual.md -> User_Manual.pdf and GZero_methods.md -> GZero_methods.pdf.
 
     py docs/build_manual.py
 
@@ -17,7 +17,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 LATEX = os.path.join(HERE, "latex")
-DOCUMENTS = [("User_Manual", True), ("GZero_1.4_methods", False)]   # (name, with contents)
+DOCUMENTS = [("User_Manual", True), ("GZero_methods", False)]   # (name, with contents)
 
 
 def run(cmd, cwd):

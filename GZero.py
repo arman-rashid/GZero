@@ -100,6 +100,43 @@ def selftest(report_path):
     err = np.max(np.abs(np.log10(rec.G) - logG))
     import igor2.packed  # noqa: F401 - must be bundled for .pxp files
     lines.append(f"dual-stage columns max error {err:.1e} decades, igor2 ok")
+    # every table format gives the same columns
+    import gzip
+    import h5py
+    import scipy.io as sio
+    import pandas as pd
+    I1, z1 = 10 ** np.linspace(-1, -6, 400) * G0 * 0.1, np.linspace(0, 1, 400)
+    fmts = []
+    with _tf.TemporaryDirectory() as tmp:
+        P = lambda n: os.path.join(tmp, n)  # noqa: E731
+        with gzip.open(P("a.txt.gz"), "wt") as fh:
+            np.savetxt(fh, np.c_[I1, z1], delimiter="\t", header="I\tz", comments="")
+        pd.DataFrame({"I": I1, "z": z1}).to_excel(P("a.xlsx"), index=False)
+        sio.savemat(P("a.mat"), {"I": I1, "z": z1, "fs": 1e4})
+        np.savez(P("a.npz"), I=I1, z=z1, fs=1e4)
+        with h5py.File(P("a.h5"), "w") as f5:
+            f5["I"], f5["z"] = I1, z1
+            f5.attrs["fs"] = 1e4
+        with open(P("a.lvm"), "w") as fh:
+            fh.write("LabVIEW Measurement\t\n***End_of_Header***\t\n\nDelta_X\t1e-4\t1e-4\n***End_of_Header***\t\n"
+                     "X_Value\tI\tz\tComment\n")
+            fh.writelines(f"{k * 1e-4:g}\t{a_:.8e}\t{b_:.6f}\n" for k, (a_, b_) in enumerate(zip(I1, z1)))
+        cs1 = cv.ColumnSettings(current_a_column="I", piezo_column="z")
+        for n_ in ("a.txt.gz", "a.xlsx", "a.mat", "a.npz", "a.h5", "a.lvm"):
+            r1 = cv.load_recordings(P(n_), cs1)[0]
+            if np.max(np.abs(np.log10(r1.G) - np.linspace(-1, -6, 400))) > 1e-5:
+                raise AssertionError(f"{n_} read wrongly")
+            fmts.append(n_.split(".", 1)[1])
+    lines.append("file formats read correctly: " + ", ".join(fmts))
+    from gzero import blinking as bk, changepoints as cpt
+    yb, fsb, truth = bk.simulate(seed=1)
+    br = bk.analyse([(yb, fsb)], bk.BlinkSettings())
+    lines.append(f"blinking: {len(br.blinks)} of {len(truth)} blinks, log G {br.peak[0]:.3f} (truth -3.5), "
+                 f"tau_on {1e3 * br.tau_on[0]:.1f} ms (truth 20), tau_off {1e3 * br.tau_off[0]:.0f} ms (truth 100)")
+    cr = cpt.analyse(good, cpt.ChangePointSettings())
+    gp = np.median([x.logG_plateau for x in cr.significant()])
+    lines.append(f"change points: {len(cr.significant())} of {len(cr.ruptures)} traces rupture from a plateau, "
+                 f"median plateau log G {gp:.2f}")
     import tempfile
     from gzero import figures, style
     zc, gc, H2 = an.hist2d(good, an.HistSettings())
@@ -107,7 +144,8 @@ def selftest(report_path):
               figures.histogram_2d(zc, gc, H2, "per trace")] + figures.noise(r, sc, ns, H[0], 0) \
         + figures.junctions(jr) + figures.iv_models(mr, ivm.slm_current, ivm.fowler_nordheim) \
         + figures.events(er, None, evm.time_histogram(H, evm.EventSettings())) \
-        + figures.egain(sets[0], b, ivm.slm_current) + figures.thermo(tr_)
+        + figures.egain(sets[0], b, ivm.slm_current) + figures.thermo(tr_) + figures.blinking(br) \
+        + figures.changepoints(cr, None, cpt.level_histogram(cr))
     with tempfile.TemporaryDirectory() as tmp:
         files = style.export_panels(panels, tmp, "selftest", style.FigureSettings())
         sizes = [os.path.getsize(f) for f in files]

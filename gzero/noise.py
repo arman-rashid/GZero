@@ -221,16 +221,15 @@ def analyse(segments: list[Trace], ns: NoiseSettings) -> NoiseResult:
         for start, y in _windows_from(seg, ns):
             g = 10.0 ** y
             f, p = _psd(g, seg.fs, ns)
-            if freqs is None:
-                freqs = f
-            elif len(f) != len(freqs) or not np.allclose(f, freqs):
-                # windows of different length (whole holds): put on a common grid
-                p = np.interp(freqs, f, p)
-                f = freqs
             band = (f >= ns.f_lo) & (f <= ns.f_hi)
             if np.count_nonzero(band) < 2:
                 raise ValueError("The integration band contains fewer than 2 frequency points. Widen it or use longer windows.")
-            NP = float(trapezoid(p[band], f[band]))
+            NP = float(trapezoid(p[band], f[band]))      # on the window's own frequencies
+            if freqs is None:
+                freqs = f
+            elif len(f) != len(freqs) or not np.allclose(f, freqs):
+                # windows of different length (whole holds): common grid for the mean and floor PSD only
+                p = np.interp(freqs, f, p)
             gm = float(np.mean(g))
             with np.errstate(all="ignore"), warnings.catch_warnings():
                 warnings.simplefilter("ignore")   # flat windows: kurtosis undefined
@@ -295,7 +294,7 @@ def fit_bell(x: np.ndarray, y: np.ndarray, n: float, xb: int = 40, yb: int = 40)
     lb = [0, xe[0], ye[0], 1e-3, 1e-3, -0.99, 0]
     ub = [np.inf, xe[-1], ye[-1], 10 * (xe[-1] - xe[0]), 10 * (ye[-1] - ye[0]), 0.99, H.max()]
     try:
-        popt, _ = curve_fit(_gauss2d, (X, Y), H.ravel(), p0=p0, bounds=(lb, ub), maxfev=20000)
+        popt, _ = curve_fit(_gauss2d, (X, Y), H.ravel(), p0=p0, bounds=(lb, ub), maxfev=5000)
         fit = BellFit(n, popt[1], popt[2], popt[3], popt[4], popt[5], popt[0])
     except (RuntimeError, ValueError):
         fit = BellFit(n, p0[1], p0[2], p0[3], p0[4], p0[5], p0[0], ok=False)
@@ -338,11 +337,16 @@ def scaling_exponent(G: np.ndarray, NP: np.ndarray, ns: NoiseSettings) -> dict:
     tau_k = np.array([stats.kendalltau(x[sub], (ly - n * x)[sub])[0] for n in grid])
 
     # 2D Gaussian ("bell") fit: zero of the fitted correlation
-    rho_fit = []
-    for n in grid:
+    # (each fit is slow, so at most ~40 n values are fitted and the rest interpolated)
+    coarse = grid[::max(1, int(np.ceil(len(grid) / 40)))]
+    rho_c = []
+    for n in coarse:
         f, *_ = fit_bell(x, ly - n * x, n, ns.x_bins, ns.y_bins)
-        rho_fit.append(f.rho if f.ok else np.nan)
-    rho_fit = np.array(rho_fit)
+        rho_c.append(f.rho if f.ok else np.nan)
+    rho_c = np.array(rho_c)
+    ok = np.isfinite(rho_c)
+    rho_fit = np.interp(grid, coarse[ok], rho_c[ok], left=np.nan, right=np.nan) if ok.sum() >= 2 \
+        else np.full(len(grid), np.nan)
     n_fit = _zero_crossing(grid, rho_fit)
 
     # bootstrap check of the OLS uncertainty
@@ -401,7 +405,7 @@ def binned_noise(G: np.ndarray, NP: np.ndarray, bins: int = 20):
     """Mean log NP in log G bins (for overlaying a trend on the scatter)."""
     x, y = np.log10(G), np.log10(NP)
     e = np.linspace(x.min(), x.max(), bins + 1)
-    idx = np.digitize(x, e) - 1
+    idx = np.clip(np.digitize(x, e) - 1, 0, bins - 1)
     xc, ym, ys = [], [], []
     for k in range(bins):
         s = idx == k

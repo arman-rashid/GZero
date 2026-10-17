@@ -95,7 +95,7 @@ class ThermoTab(AnalysisTab):
 
     def add_files(self):
         paths, _ = QFileDialog.getOpenFileNames(self, "Thermovoltage files", self.main.last_dir,
-                                                "Data (*.txt *.csv *.dat *.tsv *.pxp *.ibw);;All files (*)")
+                                                bj_io.file_filter(tdms=False))
         if not paths:
             return
         self.main.last_dir = os.path.dirname(paths[0])

@@ -1,8 +1,8 @@
-# GZero 1.3 and 1.4: new analysis methods
+# GZero 1.3 to 1.5: new analysis methods
 
 October 2026, arman-rashid
 
-This note describes what changed in GZero 1.3 and 1.4, why, and how I checked it. Version 1.3 adds three things that most break-junction papers report and GZero couldn't do yet: the junction yield with per-trace plateau statistics, single-level model fits of I-V curves, and transition voltage spectroscopy. Version 1.4 brings in the analysis from our own paper (Rashid et al., JACS 2025): the finite-temperature energy-grid fit, the noise protocol, event detection and the dwell time. It also adds two tabs for other kinds of measurements, EGaIn ensemble junctions and thermopower, and lets GZero read TDMS files of several GB.
+This note describes what changed in GZero 1.3, 1.4 and 1.5, why, and how it was checked. Version 1.3 adds three things that most break-junction papers report and GZero couldn't do yet: the junction yield with per-trace plateau statistics, single-level model fits of I-V curves, and transition voltage spectroscopy. Version 1.4 brings in the analysis from our own paper (Rashid et al., JACS 2025): the finite-temperature energy-grid fit, the noise protocol, event detection and the dwell time. It also adds two tabs for other kinds of measurements, EGaIn ensemble junctions and thermopower, and lets GZero read TDMS files of several GB. Version 1.5 adds change-point detection in breaking traces, the analysis of fixed-gap blinking (I(t)) measurements, six more file formats, and fixes for the problems found in a full review of the code.
 
 ## What's new
 
@@ -17,12 +17,15 @@ Each addition answers a question the existing tabs couldn't.
 | EGaIn (ensemble) | New tab | What are the statistics of large-area junctions: yield, rectification and beta? | `gzero/egain.py` |
 | Thermopower | New tab | What is the Seebeck coefficient, and is transport through the HOMO or the LUMO? | `gzero/thermo.py` |
 | Large TDMS files | Data & Traces tab | Can a recording of more than 1 GB be analysed without running out of memory? | `gzero/streaming.py` |
+| Change points (1.5) | New tab after Junction statistics | Where does each junction rupture, what is its own plateau conductance, and which traces have more than one step? | `gzero/changepoints.py` |
+| Blinking (1.5) | New tab after Events | In a fixed-gap I(t) measurement: at what conductance do molecules bridge the gap, for how long, and how often? | `gzero/blinking.py` |
+| More file formats (1.5) | Data & Traces, EGaIn, Thermopower | LabVIEW .lvm, Excel, MATLAB (also v7.3), NumPy, HDF5 and gzip-compressed text | `gzero/bj_io.py` |
 
-I also fixed one existing function on the way. The averaged I-V curve used to take the overlap of all sweeps, so the half sweeps at the start and end of a recording could shrink it to almost nothing. It now only averages sweeps that cover the typical bias range.
+One existing function was also fixed on the way. The averaged I-V curve used to take the overlap of all sweeps, so the half sweeps at the start and end of a recording could shrink it to almost nothing. It now only averages sweeps that cover the typical bias range.
 
 ## Papers reviewed
 
-I went through the methods sections of the break-junction papers people cite most and looked for analyses that are routinely reported but that GZero didn't have. Four papers shaped version 1.3:
+The methods sections of the most cited break-junction papers were searched for analyses that are routinely reported but that GZero didn't have. Four papers shaped version 1.3:
 
 | Paper | What they do | What GZero does with it |
 | --- | --- | --- |
@@ -75,7 +78,7 @@ In the single-level model with Gamma much smaller than eps0, the two polarities 
 \varepsilon_0 = \frac{2|V_t^+ V_t^-|}{\sqrt{(V_t^+)^2 + (V_t^-)^2 + \frac{10}{3}|V_t^+ V_t^-|}}, \quad a = \frac{(V_t^+ + V_t^-)\,\varepsilon_0}{4|V_t^+ V_t^-|}
 ```
 
-For a symmetric junction this reduces to eps0 = (sqrt(3)/2) V_t, about 0.87 V_t. The formula for a follows from the same stationarity condition, and I checked it numerically against the exact model (next section). Comparing the eps0 from TVS with the one from the fit is a quick way to see whether a single level describes the curves at all.
+For a symmetric junction this reduces to eps0 = (sqrt(3)/2) V_t, about 0.87 V_t. The formula for a follows from the same stationarity condition, and it was checked numerically against the exact model (next section). Comparing the eps0 from TVS with the one from the fit is a quick way to see whether a single level describes the curves at all.
 
 ## Validation of the 1.3 methods
 
@@ -155,7 +158,7 @@ A file is either one junction, with the bias and current columns chosen in the s
 | Mean log\|J\| per bias | as simulated | inside its 95 % CI |
 | beta error coverage, 20 repeats | 68 % within 1 sigma | 65 % |
 
-My first version weighted beta by sigma_log and claimed errors three times too small. Weighting by the standard error fixed that, which is what the coverage row shows.
+The first version weighted beta by sigma_log and claimed errors three times too small. Weighting by the standard error fixed that, which is what the coverage row shows.
 
 ## Thermopower tab
 
@@ -178,9 +181,71 @@ S > 0 means hole transport through the HOMO and S < 0 electron transport through
 
 Converting a 1 GB TDMS file in one go needs several GB of memory, since every step makes another array as long as the file. Files above 300 MB are therefore read in pieces of 2 minutes. Loading keeps only a min/max overview for the plot. Cutting the traces reads each piece with a 60 s margin on both sides and keeps only the traces and holds that start inside the piece, so a trace crossing a border is found once and in full. On a simulated recording this gives exactly the same traces as reading the whole file, and the self-test checks that. A 1.29 GB file (90 minutes at 10 kHz) now loads in 2.8 s and needs 0.7 GB of memory at most, against 15.6 s and 4.4 GB before.
 
+## Version 1.5: change points, blinking, file formats
+
+For 1.5 the recent literature on break-junction analysis was searched for methods that answer questions the existing tabs can't. Two stood out. Change-point detection gives one conductance per junction, measured over its own plateau, and finds traces with more than one step. Blinking (the I(t) method) is a whole measurement mode in its own right, and GZero had no tab for it.
+
+### Change points
+
+The rupture of each trace follows [Hamill et al. 2024](https://arxiv.org/abs/2401.12769). Inside the window between log G = -2 and -5.5, log G against distance is fitted by one straight line and by two lines meeting at a break k. The Chow statistic ([Chow 1960](https://doi.org/10.2307/1910133)) compares the two:
+
+```latex
+F(k) = \frac{\left(S_1 - S_2(k)\right)/p}{S_2(k)/(n - 2p)}, \qquad p = 2
+```
+
+The k with the largest F is the rupture, and the median log G before it is the plateau conductance of that junction. A large F alone isn't enough, because a plain tunnelling decay also bends slightly and its noise is small. So a trace only counts as a junction if the line before the break is also flat: |slope| below 2 decades/nm, the same criterion as the Junction statistics tab. On simulated traces the slope before the break is -0.3 decades/nm for every molecular trace and -4.3 for every blank one, so the two groups don't overlap.
+
+The steps use PELT ([Killick et al. 2012](https://doi.org/10.1080/01621459.2012.737745)) for a piecewise-constant fit of log G with a penalty of 2 ln(n) per change point and the noise sigma estimated from the trace (at least 0.05 decades). A variable number of change points per trace is the idea of PELT-R ([Vaidya, Dyer and Monti 2026](https://meetings-archive.aps.org/smt/2026/mar-s71/8/)). A tunnelling ramp is cut into many short levels by such a fit, so only levels that are themselves flat and at least 0.05 nm long count as plateau levels.
+
+| Check | True | Found |
+| --- | --- | --- |
+| Rupture, 200 traces, 70 % molecular | 70 % | 70.0 % junctions |
+| Rupture, 200 traces, 30 % molecular | 30 % | 31.5 % |
+| Plateau conductance per junction | log G -3.5 (spread 0.25) | median -3.55, spread 0.24 |
+| PELT against an exhaustive search, 5 random series | same change points | identical |
+| PELT, trace with plateaus at -2.9 and -3.9 (0.3 nm each) | two levels | -2.90 and -3.90, 0.30 and 0.32 nm |
+
+### Blinking
+
+With the gap held fixed, a molecule bridging it shows up as a jump of the current to the molecular level, and its leaving as a jump back ([Haiss et al. 2003](https://doi.org/10.1021/ja038214e), [2006](https://doi.org/10.1038/nmat1781)). The baseline is a low percentile (20 %) of log G in 0.5 s blocks, so it follows drift without being pulled up by the blinks. A blink starts 0.6 decades above the baseline and ends below 0.3 decades (hysteresis). The blink conductance is a Gaussian fit to the blink levels. The on and off times are fitted with the maximum-likelihood lifetime of an exponential above the shortest time measured:
+
+```latex
+\tau = \frac{N}{N - 1}\,\left(\bar{t} - t_\mathrm{min}\right), \qquad \delta\tau = \tau / \sqrt{N}
+```
+
+| Check (simulated 20 s recordings) | True | Found |
+| --- | --- | --- |
+| Blinks found | 143, 172, 186 | 137, 171, 179 |
+| Blink conductance | log G -3.5 | -3.51 to -3.53 (+/- 0.01) |
+| tau_on | 20 ms | 19.7-23.4 ms (+/- 1.5-2.0) |
+| tau_off | 100 ms | 91-121 ms (+/- 7-10) |
+
+### File formats
+
+Every non-TDMS format is turned into the same list of named columns, so the column settings work unchanged. New in 1.5: LabVIEW `.lvm` (header names, `Delta_X` as the sampling interval), Excel `.xlsx` (every sheet), MATLAB `.mat` (struct fields, v7.3 through h5py), NumPy `.npy` / `.npz`, HDF5 `.h5` / `.hdf5` (data sets by path, sampling rate from an attribute), and gzip-compressed text. The self-test writes a model trace in each of these formats, reads it back and checks that the conductance agrees to 10^-5 decades.
+
+### Fixes
+
+A complete review of the code found these problems, all fixed in 1.5:
+
+| Problem | Effect before 1.5 |
+| --- | --- |
+| The delimiter of a text file was guessed from the first line, even if that was a header with a comma | Such files could not be read |
+| Missing current samples (NaN) and zero bias became G = 100 G0 | Fake metal-contact spikes; now they go to the floor |
+| The diode calibration left NaN inputs unset | Random values in the converted current |
+| The noise power of each window was integrated after interpolation onto the frequency grid of the first window | With whole-hold windows of different length, NP depended on which hold came first; now each window is integrated on its own frequencies |
+| A peak fit was kept when the histogram settings changed but the number of traces didn't | An old fit and dwell time could be shown and saved with a new histogram |
+| Junction statistics, Correlation, Flicker noise, Events, I-V and Piezo modulation kept their results after Clear or new traces | Old results could be saved under the name of new data |
+| Plateau export with no valid window | Error during Save results |
+| The largest point fell out of the binned noise trend | Last bin one point short |
+| The 2D histogram in `density` mode wasn't divided by the bin area | Wrong scale |
+| A recording with fewer than 3 piezo samples | Error during trace detection |
+| The bell fit was repeated at every n of the scan (up to 200 fits) | Very slow with few windows; now at most 40 fits, interpolated |
+
+
 ## Open-source code reviewed
 
-Two public codes cover the same ground, and I read both in full for their EGaIn and I-V methods.
+Two public codes cover the same ground, and both were read in full for their EGaIn and I-V methods.
 
 | Code | Group | License | Modules | How GZero used it |
 | --- | --- | --- | --- | --- |
@@ -191,7 +256,7 @@ Of the other Hong-group analyses in XMe, GZero already had correlation, spectral
 
 ## Sources
 
-Code: [arman-rashid/GZero](https://github.com/arman-rashid/GZero), release v1.4. The full method description is in the user manual (`docs/User_Manual.pdf`), sections 4.7, 5.2, 6.4, 9.5, 9.8 and 10.1-10.6, references 26-37.
+Code: [arman-rashid/GZero](https://github.com/arman-rashid/GZero), release v1.5. The full method description is in the user manual (`docs/User_Manual.pdf`), sections 3.1, 4.7, 5.2, 6.4, 6.5, 9.5, 9.8, 9.9 and 10.1-10.6, references 26-43.
 
 - M. Kamenetska et al., "Formation and evolution of single-molecule junctions", Phys. Rev. Lett. 102, 126803 (2009). [doi:10.1103/PhysRevLett.102.126803](https://doi.org/10.1103/PhysRevLett.102.126803)
 - L. A. Zotti et al., "Revealing the role of anchoring groups in the electrical conduction through single-molecule junctions", Small 6, 1529-1535 (2010). [doi:10.1002/smll.200902227](https://doi.org/10.1002/smll.200902227)
@@ -203,4 +268,10 @@ Code: [arman-rashid/GZero](https://github.com/arman-rashid/GZero), release v1.4.
 - P. Reddy et al., "Thermoelectricity in molecular junctions", Science 315, 1568 (2007). [doi:10.1126/science.1137149](https://doi.org/10.1126/science.1137149)
 - J. R. Widawsky et al., "Simultaneous determination of conductance and thermopower of single molecule junctions", Nano Lett. 12, 354 (2012). [doi:10.1021/nl203634m](https://doi.org/10.1021/nl203634m)
 - E. M. Opodi et al., "A single level tunneling model for molecular junctions: evaluating the simulation methods", Phys. Chem. Chem. Phys. 24, 11958 (2022). [doi:10.1039/D1CP05807J](https://doi.org/10.1039/D1CP05807J)
+- J. M. Hamill et al., "Improving single-molecule conductance measurements with change point detection from the econometrics toolbox", arXiv:2401.12769 (2024). [arxiv.org/abs/2401.12769](https://arxiv.org/abs/2401.12769)
+- G. C. Chow, "Tests of equality between sets of coefficients in two linear regressions", Econometrica 28, 591 (1960). [doi:10.2307/1910133](https://doi.org/10.2307/1910133)
+- R. Killick, P. Fearnhead, I. A. Eckley, "Optimal detection of changepoints with a linear computational cost", J. Am. Stat. Assoc. 107, 1590 (2012). [doi:10.1080/01621459.2012.737745](https://doi.org/10.1080/01621459.2012.737745)
+- A. Vaidya, J. Dyer, O. L. A. Monti, "Understanding conductance fluctuations in single-molecule break junctions: a statistical approach", APS March Meeting 2026 (abstract). [meetings-archive.aps.org](https://meetings-archive.aps.org/smt/2026/mar-s71/8/)
+- W. Haiss et al., "Redox state dependence of single molecule conductivity", J. Am. Chem. Soc. 125, 15294 (2003). [doi:10.1021/ja038214e](https://doi.org/10.1021/ja038214e)
+- W. Haiss et al., "Precision control of single-molecule electrical junctions", Nature Materials 5, 995 (2006). [doi:10.1038/nmat1781](https://doi.org/10.1038/nmat1781)
 - [XMe_DataAnalysis](https://github.com/Pilab-XMU/XMe_DataAnalysis) and [GaussFit](https://github.com/rchiechi/gaussfit) on GitHub

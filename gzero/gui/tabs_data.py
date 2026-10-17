@@ -9,10 +9,10 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox, QFileDialog, QGroupBox, QHBoxLayout, QLabel, QListWidget, QListWidgetItem,
-    QPushButton, QSpinBox, QSplitter, QVBoxLayout, QWidget, QAbstractItemView,
+    QSpinBox, QSplitter, QVBoxLayout, QWidget, QAbstractItemView,
 )
 
-from .. import bj_io, conversion as cv, figures as figs, simulation as sim, traces as tr
+from .. import bj_io, conversion as cv, figures as figs, simulation as sim
 from ..analysis import centers
 from .base import AnalysisTab
 from .widgets import PlotPanel, SettingsForm, button_row, decimate_for_plot, error_box, make_button, scroll_panel
@@ -423,7 +423,7 @@ class DataTab(AnalysisTab):
         self.rec_list = QListWidget()
         self.rec_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.rec_list.currentRowChanged.connect(lambda _: self.plot_overview())
-        self.col_form = SettingsForm("Columns (text, .cvr, Igor .pxp / .ibw)", project.column_settings,
+        self.col_form = SettingsForm("Columns (text, Excel, MATLAB, HDF5, Igor, ...)", project.column_settings,
                                      COLUMN_LABELS, COLUMN_CHOICES, COLUMN_TIPS)
         self.seg_form = SettingsForm("Trace detection and cutting", project.segment_settings,
                                      SEGMENT_LABELS, SEGMENT_CHOICES, SEGMENT_TIPS)
@@ -506,7 +506,7 @@ class DataTab(AnalysisTab):
     def load_files(self):
         paths, _ = QFileDialog.getOpenFileNames(
             self, "Break-junction data", self.main.last_dir,
-            "Data (*.cvr *.tdms *.txt *.csv *.dat *.tsv *.pxp *.ibw);;All files (*)")
+            bj_io.file_filter())
         self._load(paths)
 
     def load_folder(self):
@@ -552,7 +552,7 @@ class DataTab(AnalysisTab):
     def show_columns(self):
         path, _ = QFileDialog.getOpenFileName(
             self, "Show columns", self.main.last_dir,
-            "Text / Igor (*.cvr *.txt *.csv *.dat *.tsv *.pxp *.ibw);;All files (*)")
+            bj_io.file_filter(tdms=False))
         if not path:
             return
 

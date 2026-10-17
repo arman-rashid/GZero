@@ -7,6 +7,18 @@
 .txt/.csv/.dat  any numeric columns, the user says which one is which
 .pxp / .ibw     Igor Pro packed experiment / binary wave (needs igor2); every
                 numeric wave is a column, 2-D waves give one column per column
+.lvm            LabVIEW measurement file (text); Delta_X in the header sets the
+                sampling rate, the X_Value column becomes the column "time"
+.xlsx / .xlsm   Excel workbook (openpyxl); every sheet is read, a header row
+                gives the column names
+.mat            MATLAB file; v4-v7.2 with scipy, v7.3 (HDF5) with h5py
+.npy / .npz     NumPy array(s)
+.h5 / .hdf5     HDF5 (h5py); every numeric data set is a column, a sampling
+                rate is taken from an attribute fs / sampling_rate / dt
+*.gz            any of the text formats compressed with gzip
+Every format is turned into named numeric columns (ColumnTable), so the same
+column settings work for all of them. 2-D arrays give one column per column
+(the longer axis is taken as time).
 """
 
 from __future__ import annotations
@@ -17,9 +29,22 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-TEXT_EXTENSIONS = (".cvr", ".txt", ".csv", ".dat", ".tsv")
+TEXT_EXTENSIONS = (".cvr", ".txt", ".csv", ".dat", ".tsv", ".lvm")
+GZIP_EXTENSIONS = tuple(e + ".gz" for e in TEXT_EXTENSIONS)
 IGOR_EXTENSIONS = (".pxp", ".ibw")
-DATA_EXTENSIONS = (".tdms",) + TEXT_EXTENSIONS + IGOR_EXTENSIONS
+EXCEL_EXTENSIONS = (".xlsx", ".xlsm")
+MATLAB_EXTENSIONS = (".mat",)
+NUMPY_EXTENSIONS = (".npy", ".npz")
+HDF5_EXTENSIONS = (".h5", ".hdf5")
+TABLE_EXTENSIONS = (TEXT_EXTENSIONS + GZIP_EXTENSIONS + IGOR_EXTENSIONS + EXCEL_EXTENSIONS + MATLAB_EXTENSIONS
+                    + NUMPY_EXTENSIONS + HDF5_EXTENSIONS)
+DATA_EXTENSIONS = (".tdms",) + TABLE_EXTENSIONS
+
+
+def file_filter(tdms: bool = True) -> str:
+    """Qt file-dialog filter with every readable format."""
+    ext = DATA_EXTENSIONS if tdms else TABLE_EXTENSIONS
+    return "Data (" + " ".join("*" + e for e in ext) + ");;All files (*)"
 
 
 @dataclass
@@ -263,9 +288,19 @@ def read_tdms(path: str) -> TdmsData:
     return td
 
 
-def _sniff_delimiter(path: str):
-    with open(path, "r", errors="replace") as fh:
-        for line in fh:
+def _open_text(path: str):
+    if path.lower().endswith(".gz"):
+        import gzip
+        return gzip.open(path, "rt", errors="replace")
+    return open(path, "r", errors="replace")
+
+
+def _sniff_delimiter(path: str, skip: int = 0):
+    """Delimiter of the data lines (the first skip lines are the header)."""
+    with _open_text(path) as fh:
+        for k, line in enumerate(fh):
+            if k < skip:
+                continue
             line = line.strip()
             if not line:
                 continue
@@ -281,7 +316,7 @@ def _sniff_delimiter(path: str):
 
 def _count_header_lines(path: str, max_check: int = 50) -> int:
     n = 0
-    with open(path, "r", errors="replace") as fh:
+    with _open_text(path) as fh:
         for line in fh:
             s = line.strip()
             if not s:
@@ -302,8 +337,8 @@ def read_columns(path: str) -> np.ndarray:
     """Fast numeric column reader (.cvr/.txt/.csv). Returns a 2-D float array."""
     import pandas as pd
 
-    sep = _sniff_delimiter(path)
     skip = _count_header_lines(path)
+    sep = _sniff_delimiter(path, skip)
     df = pd.read_csv(path, sep=sep, header=None, skiprows=skip, engine="c",
                      dtype=np.float64, on_bad_lines="skip")
     arr = df.to_numpy(dtype=np.float64)
@@ -318,7 +353,7 @@ def _header_names(path: str, skip: int, ncol: int):
     """Column names from the last header line, if it has one name per column."""
     if skip == 0:
         return None
-    with open(path, "r", errors="replace") as fh:
+    with _open_text(path) as fh:
         lines = [fh.readline() for _ in range(skip)]
     for line in reversed(lines):
         toks = [t.strip().strip('"') for t in re.split(r"[	,;]+|\s{2,}", line.strip()) if t.strip()]
@@ -329,7 +364,196 @@ def _header_names(path: str, skip: int, ncol: int):
     return None
 
 
+def _lvm_header(path: str):
+    """(lines to skip, Delta_X, column names) of a LabVIEW .lvm file."""
+    with _open_text(path) as fh:
+        lines = [fh.readline() for _ in range(500)]
+    ends = [i for i, line in enumerate(lines) if line.strip().startswith("***End_of_Header***")]
+    if not ends:
+        return 0, None, None
+    skip, dx, names = ends[-1] + 1, None, None
+    for line in lines[ends[0]:skip]:
+        tok = line.rstrip("\r\n").split("\t")
+        if tok[0] == "Delta_X":
+            vals = [float(v) for v in tok[1:] if v.strip()]
+            dx = vals[0] if vals else None
+    hdr = lines[skip].rstrip("\r\n").split("\t") if skip < len(lines) else []
+    if hdr and hdr[0].strip() in ("X_Value", "Time"):
+        names = [h.strip() for h in hdr if h.strip() and h.strip() != "Comment"]
+        skip += 1
+    return skip, dx, names
+
+
+def read_lvm(path: str) -> ColumnTable:
+    """LabVIEW measurement file: tab separated, the header ends with ***End_of_Header***."""
+    import pandas as pd
+
+    skip, dx, names = _lvm_header(path)
+    df = pd.read_csv(path, sep="\t", header=None, skiprows=skip, dtype=np.float64, on_bad_lines="skip",
+                     engine="c")
+    arr = df.to_numpy(np.float64)
+    arr = arr[:, ~np.all(np.isnan(arr), axis=0)]
+    if names is None or len(names) < arr.shape[1] or len(set(names)) != len(names):
+        names = [str(i) for i in range(arr.shape[1])]
+    cols = {n: arr[:, i] for i, n in enumerate(names[:arr.shape[1]])}
+    fs = 1.0 / dx if dx and dx > 0 else None
+    x = cols.pop("X_Value", None)
+    if x is not None:
+        steps = np.diff(x)
+        if fs is None and len(x) > 1 and np.median(steps) > 0:
+            fs = 1.0 / float(np.median(steps))
+        cols["time"] = x
+    return ColumnTable(path, cols, fs)
+
+
+def _array_columns(name: str, a, out: dict):
+    """Numeric array -> columns: 1-D as it is, 2-D one column per column (longer axis = time)."""
+    a = np.asarray(a)
+    if a.dtype.kind not in "fiubc" or a.size < 2:
+        return
+    if a.dtype.kind == "c":
+        a = a.real
+    a = np.squeeze(a.astype(np.float64))
+    if a.ndim == 1:
+        out[name] = a
+    elif a.ndim == 2:
+        if a.shape[0] < a.shape[1]:
+            a = a.T
+        for j in range(a.shape[1]):
+            out[f"{name}[{j}]"] = a[:, j]
+
+
+FS_KEYS = ("fs", "Fs", "sampling_rate", "SamplingRate", "sample_rate")
+DT_KEYS = ("dt", "Delta_X", "wf_increment")
+
+
+def _fs_from_attrs(attrs) -> float | None:
+    """Sampling rate from attributes / scalar variables named fs, sampling_rate, dt, ..."""
+    for keys, invert in ((FS_KEYS, False), (DT_KEYS, True)):
+        for k in keys:
+            if k in attrs:
+                try:
+                    v = float(np.ravel(attrs[k])[0])
+                except (TypeError, ValueError, IndexError):
+                    continue
+                if v > 0:
+                    return 1.0 / v if invert else v
+    return None
+
+
+def read_hdf5(path: str) -> ColumnTable:
+    """Numeric data sets of an HDF5 file (also MATLAB v7.3); names are their paths (a:b:c)."""
+    try:
+        import h5py
+    except ImportError as exc:  # pragma: no cover - environment dependent
+        raise ImportError("Reading HDF5 / MATLAB v7.3 files needs h5py:  pip install h5py") from exc
+    cols, scalars = {}, {}
+    with h5py.File(path, "r") as f:
+        fs = _fs_from_attrs(f.attrs)
+
+        def visit(name, obj):
+            if not isinstance(obj, h5py.Dataset) or obj.dtype.kind not in "fiu":
+                return
+            if obj.size == 1:
+                scalars[name.split("/")[-1]] = obj[()]
+            elif obj.ndim <= 2:
+                _array_columns(name.replace("/", ":"), obj[()], cols)
+                scalars.update({k: v for k, v in obj.attrs.items()})
+
+        f.visititems(visit)
+    if not cols:
+        raise ValueError(f"No numeric data sets found in {os.path.basename(path)}")
+    return ColumnTable(path, cols, fs or _fs_from_attrs(scalars))
+
+
+def read_matlab(path: str) -> ColumnTable:
+    """MATLAB .mat: every numeric variable (and struct field, as var.field) becomes column(s)."""
+    from scipy.io import loadmat
+    try:
+        m = loadmat(path, squeeze_me=True, struct_as_record=False)
+    except (NotImplementedError, ValueError):   # v7.3 files are HDF5
+        with open(path, "rb") as fh:
+            head = fh.read(1024)
+        if b"\x89HDF\r\n\x1a\n" not in head:
+            raise
+        return read_hdf5(path)
+    cols, scalars = {}, {}
+
+    def walk(name, v):
+        if hasattr(v, "_fieldnames"):
+            for f in v._fieldnames:
+                walk(f"{name}.{f}", getattr(v, f))
+        elif np.ndim(v) == 0 and isinstance(v, (int, float, np.number)):
+            scalars[name.split(".")[-1]] = v
+        elif isinstance(v, np.ndarray):
+            _array_columns(name, v, cols)
+
+    for k, v in m.items():
+        if not k.startswith("__"):
+            walk(k, v)
+    if not cols:
+        raise ValueError(f"No numeric variables found in {os.path.basename(path)}")
+    return ColumnTable(path, cols, _fs_from_attrs(scalars))
+
+
+def read_numpy(path: str) -> ColumnTable:
+    """.npy: one array (2-D gives the columns 0, 1, ...); .npz: every array by its name."""
+    cols, scalars = {}, {}
+    if path.lower().endswith(".npz"):
+        with np.load(path, allow_pickle=False) as z:
+            for k in z.files:
+                a = z[k]
+                if a.size == 1:
+                    scalars[k] = a
+                else:
+                    _array_columns(k, a, cols)
+    else:
+        tmp = {}
+        _array_columns("a", np.load(path, allow_pickle=False), tmp)
+        cols = {("0" if k == "a" else k[2:-1]): v for k, v in tmp.items()}
+    if not cols:
+        raise ValueError(f"No numeric arrays found in {os.path.basename(path)}")
+    return ColumnTable(path, cols, _fs_from_attrs(scalars))
+
+
+def read_excel(path: str) -> ColumnTable:
+    """Every sheet of an Excel workbook. The row above the first all-numeric row gives
+    the column names; columns of the second and later sheets are named sheet:column."""
+    import pandas as pd
+
+    try:
+        sheets = pd.read_excel(path, sheet_name=None, header=None)
+    except ImportError as exc:  # pragma: no cover - environment dependent
+        raise ImportError("Reading Excel files needs openpyxl:  pip install openpyxl") from exc
+    cols = {}
+    for k, (sheet, df) in enumerate(sheets.items()):
+        df = df.dropna(how="all").dropna(axis=1, how="all")
+        if df.empty:
+            continue
+        num = df.apply(pd.to_numeric, errors="coerce")
+        full = num.notna().all(axis=1).to_numpy()
+        first = int(np.argmax(full)) if full.any() else 0
+        names = None
+        if first > 0:
+            hdr = [str(x).strip() for x in df.iloc[first - 1].tolist()]
+            if len(set(hdr)) == len(hdr) and all(h and h != "nan" for h in hdr):
+                names = hdr
+        data = num.iloc[first:].to_numpy(np.float64)
+        if names is None:
+            names = [str(i) for i in range(data.shape[1])]
+        pre = "" if k == 0 else f"{sheet}:"
+        for j, n in enumerate(names):
+            ok = np.flatnonzero(np.isfinite(data[:, j]))
+            if len(ok) >= 2:
+                cols[pre + n] = data[:ok[-1] + 1, j]
+    if not cols:
+        raise ValueError(f"No numeric columns found in {os.path.basename(path)}")
+    return ColumnTable(path, cols)
+
+
 def read_text_table(path: str) -> ColumnTable:
+    if path.lower().removesuffix(".gz").endswith(".lvm"):
+        return read_lvm(path)
     arr = read_columns(path)
     names = _header_names(path, _count_header_lines(path), arr.shape[1])
     if names is None:
@@ -419,8 +643,17 @@ def read_igor(path: str) -> ColumnTable:
 
 def read_table(path: str) -> ColumnTable:
     """Any non-TDMS data file as a :class:`ColumnTable`."""
-    if path.lower().endswith(IGOR_EXTENSIONS):
+    low = path.lower()
+    if low.endswith(IGOR_EXTENSIONS):
         return read_igor(path)
+    if low.endswith(EXCEL_EXTENSIONS):
+        return read_excel(path)
+    if low.endswith(MATLAB_EXTENSIONS):
+        return read_matlab(path)
+    if low.endswith(NUMPY_EXTENSIONS):
+        return read_numpy(path)
+    if low.endswith(HDF5_EXTENSIONS):
+        return read_hdf5(path)
     return read_text_table(path)
 
 

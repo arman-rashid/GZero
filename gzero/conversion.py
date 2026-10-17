@@ -137,7 +137,7 @@ class DiodeCalibration:
     def __call__(self, v: np.ndarray) -> np.ndarray:
         u = np.asarray(v, float) - self.v_offset
         a = np.abs(u)
-        out = np.empty_like(u)
+        out = np.full_like(u, np.nan)
         poly = np.polynomial.polynomial.polyval
 
         mid = a < self.t_low
@@ -193,11 +193,14 @@ def currents_to_conductance(ia, ib, E, R=0.0, amplifier="dual stage", combine="a
     G = conductance(I)
     # Where E - I*R <= 0 the limiting resistor carries the whole bias (closed
     # contact beyond what can be resolved): clamp to the ceiling.
-    saturated = ~np.isfinite(G) | ((E - I * R <= 0) & (I * E > 0))
+    # A missing current (NaN) or zero bias (I/0) says nothing about the junction: those samples
+    # go to the floor, not to the ceiling.
+    unknown = np.isnan(G) | (np.asarray(E) == 0) | ~np.isfinite(I)
+    saturated = (np.isinf(G) | ((E - I * R <= 0) & (I * E > 0))) & ~unknown
     if a_saturated is not None and uses_a:
         # low-gain stage saturated: the contact conducts more than it can measure
         saturated |= np.asarray(a_saturated, bool)
-    G = np.where(saturated, g_ceiling, np.abs(G))
+    G = np.where(saturated, g_ceiling, np.where(unknown, 1e-12, np.abs(G)))
     return np.clip(G, None, g_ceiling), I, frac_b
 
 
@@ -584,7 +587,8 @@ def load_recordings(path: str, column_settings: ColumnSettings | None = None,
     from . import bj_io
 
     ext = os.path.splitext(path)[1].lower()
-    name = os.path.splitext(os.path.basename(path))[0]
+    base = os.path.basename(path)
+    name = os.path.splitext(base[:-3] if base.lower().endswith(".gz") else base)[0]
     if ext == ".tdms" and stream_settings is not None:
         from . import streaming
         if streaming.should_stream(path, stream_settings):

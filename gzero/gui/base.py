@@ -19,6 +19,10 @@ class AnalysisTab(QWidget):
     """
 
     title = "Tab"
+    # results computed from the traces / recordings: cleared (with the plot) when those change,
+    # so old results can't be saved under the name of new data. {attribute: empty value}
+    reset_on_traces: dict = {}
+    reset_on_recordings: dict = {}
 
     def __init__(self, project, main):
         super().__init__()
@@ -48,6 +52,25 @@ class AnalysisTab(QWidget):
                 form.set_value(_from_dict(cls, d[name]))
             except (TypeError, ValueError):
                 pass
+
+    def connect_resets(self):
+        if self.reset_on_traces:
+            self.project.traces_changed.connect(lambda *_: self.reset_results(self.reset_on_traces))
+        if self.reset_on_recordings:
+            self.project.recordings_changed.connect(lambda *_: self.reset_results(self.reset_on_recordings))
+
+    def reset_results(self, attrs: dict):
+        if not any(getattr(self, k, None) for k in attrs):
+            return
+        for k, v in attrs.items():
+            setattr(self, k, v() if callable(v) else v)
+        plot = getattr(self, "plot", None)
+        if plot is not None:
+            plot.show_panels([])
+        for name in ("result_label", "model_label"):
+            lab = getattr(self, name, None)
+            if lab is not None:
+                lab.setText("")
 
     # -- results ------------------------------------------------------------------
     def export(self, folder: str, prefix: str) -> list[str]:

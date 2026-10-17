@@ -724,3 +724,156 @@ def thermo(r) -> list[Panel]:
                 ax.set_ylabel(r"S ($\mu$V/K)")
             panels.append(Panel("thermo_seebeck_vs_logG", s_g, aspect=0.8))
     return panels
+
+
+def blinking(res, example=None) -> list[Panel]:
+    """res = blinking.BlinkResult; example = (t, log G raw, smoothed, baseline, blinks, label) or None."""
+    s = res.settings
+    panels = []
+    if example is not None:
+        t, raw, ys, base, bl, lab = example
+
+        def ex(fig, ax):
+            ax.plot(*decimate(t, raw), lw=0.3, color="0.65", label=LOGG)
+            ax.plot(*decimate(t, ys), lw=0.7, color="k", label="smoothed")
+            ax.plot(t, base, lw=0.8, color=PALETTE[0], label="baseline")
+            ax.plot(t, base + s.up_threshold, lw=0.5, ls=":", color=PALETTE[0])
+            for b in bl:
+                ax.axvspan(t[b.start], t[min(b.stop, len(t) - 1)], color=PALETTE[1], alpha=0.25, lw=0)
+            ax.set_xlabel("Time (s)")
+            ax.set_ylabel(LOGG)
+            ax.legend()
+            title(ax, lab)
+        panels.append(Panel("blinking_example", ex, aspect=0.45))
+    if not res.blinks:
+        return panels
+    c, h = res.hist
+    m, me, sg = res.peak
+
+    def lev(fig, ax):
+        w = c[1] - c[0]
+        ax.bar(c, h, width=w, color=PALETTE[1], alpha=0.7, lw=0)
+        if np.isfinite(sg) and sg > 0:
+            x = np.linspace(c[0], c[-1], 400)
+            a = h.max()
+            ax.plot(x, a * np.exp(-(x - m) ** 2 / (2 * sg ** 2)), color=PALETTE[3], lw=1)
+            ax.axvline(m, color=PALETTE[3], lw=0.6, ls="--")
+        ax.set_xlabel(f"Blink {LOGG}")
+        ax.set_ylabel("Blinks")
+        title(ax, f"log G = {m:.2f} +/- {me:.2f}")
+
+    def times(arr, tau, name, col):
+        def f(fig, ax):
+            x = 1e3 * np.asarray(arr)
+            if not len(x):
+                return
+            hh, e = np.histogram(x, s.time_bins)
+            cc = 0.5 * (e[1:] + e[:-1])
+            ax.bar(cc, hh, width=e[1] - e[0], color=col, alpha=0.7, lw=0)
+            if np.isfinite(tau[0]) and tau[0] > 0:
+                xx = np.linspace(x.min(), x.max(), 300)
+                n0 = len(x) * (e[1] - e[0]) / (1e3 * tau[0])
+                ax.plot(xx, n0 * np.exp(-(xx - x.min()) / (1e3 * tau[0])), color="k", lw=1)
+            ax.set_yscale("log")
+            ax.set_xlabel(f"{name} time (ms)")
+            ax.set_ylabel("Count")
+            title(ax, f"tau = {1e3 * tau[0]:.3g} +/- {1e3 * tau[1]:.2g} ms" if np.isfinite(tau[0]) else name)
+        return f
+
+    def height(fig, ax):
+        ax.plot([b.duration_s * 1e3 for b in res.blinks], res.levels, "o", ms=2, alpha=0.5, color=PALETTE[1])
+        ax.set_xscale("log")
+        ax.set_xlabel("On time (ms)")
+        ax.set_ylabel(f"Blink {LOGG}")
+        title(ax, "Level against lifetime")
+
+    panels += [Panel("blinking_conductance_histogram", lev), Panel("blinking_on_times", times(
+        res.on_times, res.tau_on, "On", PALETTE[1]))]
+    if len(res.off_times):
+        panels.append(Panel("blinking_off_times", times(res.off_times, res.tau_off, "Off", PALETTE[0])))
+    panels.append(Panel("blinking_level_vs_time", height))
+    if res.aligned:
+        tc, gc, H = res.aligned
+
+        def al(fig, ax):
+            vmax = np.percentile(H[H > 0], 99.5) if np.any(H > 0) else 1
+            mm = ax.pcolormesh(tc, gc, H.T, cmap="viridis", vmin=0, vmax=vmax, shading="nearest", rasterized=True)
+            _colorbar(fig, ax, mm, "Counts per blink")
+            ax.axvline(0, color="w", lw=0.5, ls=":")
+            ax.set_xlabel("Time from blink start (ms)")
+            ax.set_ylabel(LOGG)
+            title(ax, "Blinks aligned on their start")
+        panels.append(Panel("blinking_aligned_histogram", al, aspect=0.8))
+    return panels
+
+
+def changepoints(res, example=None, level_hist=None) -> list[Panel]:
+    """res = changepoints.ChangePointResult; example = (z, log G, rupture, step fit, plateau mask, label);
+    level_hist = changepoints.level_histogram(res)."""
+    s = res.settings
+    panels = []
+    if example is not None:
+        z, y, r, f, pm, lab = example
+
+        def ex(fig, ax):
+            ax.plot(z, y, lw=0.5, color="0.55", label=LOGG)
+            if f is not None:
+                for (a, b), lv, p in zip(f.bounds, f.levels, pm):
+                    ax.plot([f.z[a], f.z[b - 1]], [lv, lv], color=PALETTE[1] if p else "0.3", lw=1.6 if p else 0.8)
+            if r is not None:
+                ax.axvline(r.z_break, color=PALETTE[3], lw=0.8, ls="--", label="rupture (Chow)")
+                if r.significant:
+                    ax.axhline(r.logG_plateau, color=PALETTE[3], lw=0.6, ls=":")
+            ax.set_xlabel("Distance (nm)")
+            ax.set_ylabel(LOGG)
+            ax.legend()
+            title(ax, lab)
+        panels.append(Panel("changepoints_example", ex, aspect=0.6))
+    sig = res.significant()
+    edges = np.linspace(s.g_low, s.g_high, max(5, int(round((s.g_high - s.g_low) * s.bins_per_decade))) + 1)
+
+    def plat(fig, ax):
+        if sig:
+            ax.hist([r.logG_plateau for r in sig], edges, color=PALETTE[3], alpha=0.75)
+            g = np.array([r.logG_plateau for r in sig])
+            title(ax, f"Rupture: median {np.median(g):.2f}, {len(sig)} traces")
+        ax.set_xlabel(f"Plateau {LOGG} (before the rupture)")
+        ax.set_ylabel("Traces")
+
+    def fdist(fig, ax):
+        F = np.array([r.F for r in res.ruptures])
+        sl = np.array([r.slope_before for r in res.ruptures])
+        ok = np.array([r.significant for r in res.ruptures])
+        if len(F):
+            ax.plot(np.maximum(F[~ok], 1e-1), np.abs(sl[~ok]), "o", ms=2, color="0.6", label="blank")
+            ax.plot(np.maximum(F[ok], 1e-1), np.abs(sl[ok]), "o", ms=2, color=PALETTE[3], label="junction")
+        ax.axvline(s.f_threshold, color="k", lw=0.5, ls=":")
+        ax.axhline(s.max_plateau_slope, color="k", lw=0.5, ls=":")
+        ax.set_xscale("log")
+        ax.set_xlabel("Chow F")
+        ax.set_ylabel("|slope before the break| (dec/nm)")
+        ax.legend()
+
+    def length(fig, ax):
+        if sig:
+            ax.hist([r.length for r in sig], 40, color=PALETTE[3], alpha=0.75)
+        ax.set_xlabel("Length to rupture (nm)")
+        ax.set_ylabel("Traces")
+    panels += [Panel("changepoints_rupture_conductance", plat), Panel("changepoints_chow_F", fdist),
+               Panel("changepoints_rupture_length", length)]
+    if level_hist is not None and res.steps:
+        c, h, d = level_hist
+
+        def lv(fig, ax):
+            ax.bar(c, h, width=c[1] - c[0], color=PALETTE[1], alpha=0.75, lw=0)
+            ax.set_xlabel(f"Plateau level {LOGG}")
+            ax.set_ylabel("Summed length (nm)")
+            title(ax, "PELT plateau levels, weighted by length")
+
+        def st(fig, ax):
+            if len(d):
+                ax.hist(d, 40, color=PALETTE[0], alpha=0.75)
+            ax.set_xlabel("Step between plateaus (decades)")
+            ax.set_ylabel("Steps")
+        panels += [Panel("changepoints_levels", lv), Panel("changepoints_step_heights", st)]
+    return panels

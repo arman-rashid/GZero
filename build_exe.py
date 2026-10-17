@@ -28,6 +28,10 @@ def main():
         "--collect-submodules", "gzero",
         "--hidden-import", "igor2.packed",
         "--hidden-import", "igor2.binarywave",
+        # readers imported only when a file of that type is opened
+        "--hidden-import", "openpyxl",
+        "--hidden-import", "h5py",
+        "--hidden-import", "scipy.io.matlab",
         "--hidden-import", "sklearn.utils._typedefs",
         "--hidden-import", "sklearn.neighbors._partition_nodes",
         # figure export backends are loaded by file type at save time; PyInstaller cannot see them

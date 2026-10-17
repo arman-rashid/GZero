@@ -1,10 +1,10 @@
 # GZero - User Manual
 
-Break-junction analysis software. Version 1.4, October 2026
+Break-junction analysis software. Version 1.5, October 2026
 
 ## 1. Introduction and installation
 
-I wrote GZero to analyse single-molecule break-junction data (MCBJ and STM-BJ) in one place, from the raw TDMS files of the setup to the figures for a paper. It converts the raw signals to conductance, cuts out the single traces, makes the usual histograms, measures plateau lengths, calculates 2D correlation maps, clusters traces and gets the flicker-noise exponent. It also tells you how often a molecule actually bridged the gap (the junction yield) and whether the conductance drifted during the run. For I-V sweeps it fits the single-level model and finds the transition voltage. For conductance-time traces it finds flickering and mechanical switching events, a separate tab does the ensemble statistics of large-area (EGaIn) junctions, and another one the thermopower (Seebeck coefficient) from thermovoltage measurements. Piezo modulation is covered too, and there is a simulator that makes fake data with known answers, which I use to check settings.
+I wrote GZero to analyse single-molecule break-junction data (MCBJ and STM-BJ) in one place, from the raw TDMS files of the setup to the figures for a paper. It converts the raw signals to conductance, cuts out the single traces, makes the usual histograms, measures plateau lengths, calculates 2D correlation maps, clusters traces and gets the flicker-noise exponent. It also tells you how often a molecule actually bridged the gap (the junction yield) and whether the conductance drifted during the run. For I-V sweeps it fits the single-level model and finds the transition voltage. For each breaking trace it can find the moment the junction ruptures and the steps between conductance levels (change-point detection). For conductance-time traces it finds flickering and mechanical switching events, and for fixed-gap I(t) measurements the molecules blinking in and out of the gap. A separate tab does the ensemble statistics of large-area (EGaIn) junctions, and another one the thermopower (Seebeck coefficient) from thermovoltage measurements. Piezo modulation is covered too, and there is a simulator that makes fake data with known answers, which I use to check settings.
 
 ### 1.1 The tabs
 
@@ -15,10 +15,12 @@ I wrote GZero to analyse single-molecule break-junction data (MCBJ and STM-BJ) i
 | Histograms | 1D log G histogram, 2D conductance-distance histogram, Gaussian fits |
 | Plateau length | How long the molecular plateau is, in up to three windows; tunnelling decay |
 | Junction statistics | Which traces have a molecular plateau (junction yield), the conductance of each plateau, drifts over the measurement |
+| Change points | Rupture of every trace (Chow test) and its plateau conductance; the steps between conductance levels (PELT) |
 | Correlation | 2D cross-correlation of conductance values within traces |
 | Clustering | PCA and clustering of traces into groups |
 | Flicker noise | Noise power against conductance and the scaling exponent n |
 | Events | Flickering and mechanical switching in G(t), conductance-time histograms of the holds |
+| Blinking | Fixed-gap I(t): molecules jumping in and out of the gap, their conductance, lifetime and arrival rate |
 | I-V | Forward and backward bias sweeps, dI/dV, 2D I-V histograms, single-level model fit, transition voltage spectroscopy |
 | Piezo modulation | Decay constant beta from a modulated piezo |
 | EGaIn (ensemble) | Large-area junctions: log\|J\| statistics, yield, rectification, V_trans, beta from a length series |
@@ -27,7 +29,7 @@ I wrote GZero to analyse single-molecule break-junction data (MCBJ and STM-BJ) i
 
 ### 1.2 What you need
 
-Windows 10 or 11 (64 bit) for the exe. From Python it should also run on macOS and Linux, though I've only used it on Windows. 8 GB of RAM is fine, also for big files. TDMS files above 300 MB are read in pieces (4.7): a 1.3 GB test file (90 min at 10 kHz) loads in about 4 s and needs well under 1 GB of memory. Text files are still loaded completely, so very large text files need about 3-4 GB of RAM per GB of file. The window needs about 1400 x 900 pixels to be comfortable.
+Windows 10 or 11 (64 bit) for the exe. From Python it should also run on macOS and Linux, though it has mainly been tested on Windows. 8 GB of RAM is fine, also for big files. TDMS files above 300 MB are read in pieces (4.7): a 1.3 GB test file (90 min at 10 kHz) loads in about 4 s and needs well under 1 GB of memory. Text files are still loaded completely, so very large text files need about 3-4 GB of RAM per GB of file. The window needs about 1400 x 900 pixels to be comfortable.
 
 ### 1.3 Installing and starting
 
@@ -40,7 +42,7 @@ py -m pip install -r requirements.txt
 py GZero.py
 ```
 
-It needs PySide6, numpy, scipy, matplotlib, pandas, scikit-learn, npTDMS and igor2 (for Igor `.pxp` / `.ibw` files).
+It needs PySide6, numpy, scipy, matplotlib, pandas, scikit-learn, npTDMS, igor2 (for Igor `.pxp` / `.ibw` files), openpyxl (Excel) and h5py (HDF5 and MATLAB v7.3 files).
 
 If you change the code and want a new exe: `py -m pip install pyinstaller`, then `py build_exe.py` in the same folder. The new version ends up in `dist\GZero\`.
 
@@ -54,7 +56,7 @@ Settings are only kept while the program is open. File -> Save settings writes t
 
 This is the short version of a normal analysis, from a raw file to a histogram and a noise exponent. The chapter numbers point to the details.
 
-1. Go to Data & Traces, click Load files and pick a `.tdms`, `.cvr`, text or Igor `.pxp` file (several at once is fine, or use Load folder). For everything except TDMS check the column settings first: which column is what, and the bias if the file has no voltage column (4.2).
+1. Go to Data & Traces, click Load files and pick a `.tdms`, `.cvr`, text, Excel, MATLAB, HDF5, NumPy, LabVIEW `.lvm` or Igor `.pxp` file (several at once is fine, or use Load folder; 3.1 lists all formats). For everything except TDMS check the column settings first: which column is what, and the bias if the file has no voltage column (4.2).
 2. The traces are found automatically after the first load. Under the button you see how many were found, how many were accepted and why the rest were thrown out.
 3. Click through a few traces with < and > or the arrow keys. Green means accepted, red rejected. If good-looking traces are being rejected, change the limits (4.4) and press Detect / cut traces again.
 4. G and B mark the current trace as good or bad by hand.
@@ -62,7 +64,7 @@ This is the short version of a normal analysis, from a raw file to a histogram a
 6. Put *fit from* and *fit to* around the molecular peak, choose how many Gaussians, click Fit peaks (5).
 7. In Plateau length, set window 1 around the peak and click Calculate (6).
 8. In Flicker noise, click the Morris et al. 2025 preset, then Peak from histogram fit, then Run noise analysis. n and its error appear under the button (9).
-9. Correlation and Clustering if you need them (7, 8). Junction statistics gives the yield and checks for drift (6.4).
+9. Correlation and Clustering if you need them (7, 8). Junction statistics gives the yield and checks for drift (6.4), Change points the conductance of each junction from its rupture (6.5).
 10. File -> Save results (Ctrl+S), choose where and give the folder a name. Everything goes in there: text files, figures, settings (13).
 
 If you just want to try the program, go to Simulation and click Generate. You get a fake data set where you know the right answers, and you can see if the analysis finds them (12).
@@ -81,6 +83,14 @@ You only need the Convert tab for raw `.tdms` files. It turns them into conducta
 | `.cvr` | Two tab-separated columns, back-calculated current (A) and piezo (nm). Old files with three columns work too | Data & Traces |
 | `.txt` `.csv` `.dat` `.tsv` | Any number columns; you say which column is what | Data & Traces |
 | `.pxp` (Igor packed experiment), `.ibw` (Igor binary wave) | Every numeric wave is a column, named after the wave (`folder:wave` inside data folders, `wave[0]`, `wave[1]` ... for 2D waves) | Data & Traces |
+| `.lvm` (LabVIEW measurement file) | Tab-separated text with a LabVIEW header. The columns get the names from the header; the `X_Value` column becomes `time`, and `Delta_X` sets the sampling rate | Data & Traces |
+| `.xlsx`, `.xlsm` (Excel) | Every sheet is read. The row above the first all-numeric row gives the column names; columns of the second and later sheets are called `sheet:column` | Data & Traces |
+| `.mat` (MATLAB) | Every numeric variable is a column (`var.field` for struct fields, `var[0]`, `var[1]` ... for matrices). v7.3 files are HDF5 and are read with h5py. A scalar variable `fs`, `Fs`, `sampling_rate` or `dt` sets the sampling rate | Data & Traces |
+| `.npy`, `.npz` (NumPy) | `.npy`: one array, a matrix gives the columns 0, 1, ...; `.npz`: every array by its name, a scalar `fs` or `dt` sets the sampling rate | Data & Traces |
+| `.h5`, `.hdf5` (HDF5) | Every numeric data set is a column, named by its path (`group:dataset`); an attribute `fs`, `sampling_rate` or `dt` sets the sampling rate | Data & Traces |
+| `.txt.gz`, `.csv.gz`, ... | Any of the text formats compressed with gzip; read directly | Data & Traces |
+
+All formats except TDMS end up as the same thing inside the program: a list of named columns. So the column settings (4.2) work the same way for all of them, and Show columns (4.1) lists what a file contains. Matrices are always turned so that the longer side is time.
 
 TDMS files carry the sampling rate, channel gains, piezo scale and series resistor. Text files don't, so for those you type them into the column settings (4.2). Igor waves carry their x scaling: if a wave has x in seconds, the sampling rate comes from it.
 
@@ -140,9 +150,9 @@ Here the recordings are loaded and cut into single breaking traces (making trace
 
 ### 4.1 Loading
 
-Load files takes one or several files, Load folder takes every `.tdms`, `.cvr`, `.txt`, `.csv`, `.dat`, `.tsv`, `.pxp` and `.ibw` in a folder. Everything you load is analysed together. TDMS files are converted with the settings from the Convert tab (3.3), text files with the column settings below. Remove drops the selected recordings and their traces, Clear drops everything. Show columns lists the columns (or Igor waves) of a file with their numbers and lengths, so you know what to type into the column settings. The tooltip of a loaded recording says which quantities came from the file and which were calculated. The list shows how long each recording is and whether it has a piezo signal; click one to see it in the overview plot.
+Load files takes one or several files, Load folder takes every file of a readable type (3.1) in a folder. Everything you load is analysed together. TDMS files are converted with the settings from the Convert tab (3.3), text files with the column settings below. Remove drops the selected recordings and their traces, Clear drops everything. Show columns lists the columns (or Igor waves) of a file with their numbers and lengths, so you know what to type into the column settings. The tooltip of a loaded recording says which quantities came from the file and which were calculated. The list shows how long each recording is and whether it has a piezo signal; click one to see it in the overview plot.
 
-### 4.2 Column settings (text, .cvr and Igor files)
+### 4.2 Column settings (every format except TDMS)
 
 A column is given by its number (0 is the first) or by its name: the header of a text file or the wave name in an Igor file. Empty means the file doesn't have it.
 
@@ -289,15 +299,15 @@ For every peak the text also gives the dwell time, which is how long a trace spe
 \tau = \frac{A}{w} \cdot \frac{1000}{f_s}\ \mathrm{ms}, \qquad A = a\,\sigma\sqrt{2\pi}
 ```
 
-Here A is the area of the Gaussian (amplitude a, width sigma) in the per-trace histogram, w is the bin width and f_s the sampling rate, so A/w is simply the number of samples per trace that fall inside the peak. This only works with *normalization* set to `per trace` or `counts`. As a check I simulated 70 % molecular traces with 0.4 nm plateaus pulled at 2 nm/s. The expected dwell time is then 0.7 x 0.2 s = 140 ms, and the fit gives 135-146 ms.
+Here A is the area of the Gaussian (amplitude a, width sigma) in the per-trace histogram, w is the bin width and f_s the sampling rate, so A/w is simply the number of samples per trace that fall inside the peak. This only works with *normalization* set to `per trace` or `counts`. This was checked on simulated data with 70 % molecular traces, 0.4 nm plateaus and 2 nm/s pulling: the expected dwell time is 0.7 x 0.2 s = 140 ms, and the fit gives 135-146 ms.
 
 The program remembers the last fit; the Flicker noise tab uses it for the peak window (9.3).
 
 If a peak has a shoulder or a long tail, two Gaussians usually describe it better than forcing one. And when you compare samples, compare the per-trace histograms, not raw counts.
 
-## 6. Plateau length and junction statistics
+## 6. Plateau length, junction statistics and change points
 
-This chapter covers two tabs: Plateau length (6.1-6.3) and Junction statistics (6.4).
+This chapter covers three tabs: Plateau length (6.1-6.3), Junction statistics (6.4) and Change points (6.5).
 
 The plateau length is how far a junction can be pulled while the molecule is still bridging the gap. Compared with the length of the molecule it tells you whether junctions break when the molecule is fully stretched. The tab measures it in up to three conductance windows and also fits the tunnelling decay, which I use to calibrate the distance.
 
@@ -360,9 +370,61 @@ The text under the button gives the number of traces with a plateau, the yield w
 | Flat plateau length histogram | Flat length of every trace, with the threshold marked. A clear gap near the threshold means the setting is sensible |
 | Length vs conductance | One point per junction. A tilt shows that longer-stretched junctions sit at another conductance, e.g. two binding geometries |
 
-To choose the settings, start with the flat length histogram. Tunnelling-only traces pile up near zero and the molecular traces form a second hump, so put *min plateau* in the dip between them. If there's no dip, the yield depends on where you put the threshold, and you should say which one you used. On simulated data (12) with 70 % molecular traces I get 68.5 +/- 3.3 %, and with 30 % I get 29.0 +/- 3.2 %.
+To choose the settings, start with the flat length histogram. Tunnelling-only traces pile up near zero and the molecular traces form a second hump, so put *min plateau* in the dip between them. If there's no dip, the yield depends on where you put the threshold, and you should say which one you used. The method was checked on simulated data (12): with 70 % molecular traces it gives 68.5 +/- 3.3 %, and with 30 % it gives 29.0 +/- 3.2 %.
 
 Keep in mind that the yield is per accepted trace. Traces rejected in Data & Traces (4.4) aren't counted at all, so looser or stricter cutting limits change the yield. Always give it together with the cutting limits.
+
+### 6.5 Change points tab
+
+The histogram and the junction statistics look at where a trace spends its time. Change-point detection asks a different question: where exactly does the conductance of a trace change? The tab has two methods. The first finds the moment the junction ruptures and takes the plateau conductance from everything before it. The second splits each trace into flat levels, so traces with two or more steps become visible.
+
+The rupture method follows Hamill et al. (2024, ref. 38), who borrowed the Chow test from econometrics (ref. 39). Inside the window from *window: log G below* down to *window: log G above* (the first point below the upper limit to the first point below the lower one), log G against distance is described once by one straight line and once by two lines that meet at a break point k. The Chow statistic compares the two descriptions:
+
+```latex
+F(k) = \frac{\left(S_1 - S_2(k)\right)/p}{S_2(k)/(n - 2p)}, \qquad p = 2
+```
+
+S1 is the residual sum of squares of one line, S2(k) that of the two lines, and n the number of points. The break with the largest F is the rupture. The plateau conductance of the trace is the median log G before the break, and the length to rupture is the distance from the start of the window to the break. A trace counts as a junction if F reaches *Chow F threshold* and the line before the break is flatter than *max plateau slope*. The slope test matters as much as F: a pure tunnelling trace also gives a large F, because its slope changes a little along the way, but both of its lines are steep (4-9 decades/nm), while a molecular plateau falls by well under one decade per nm. The F threshold is a value of F, not a p-value, because taking the best of many break points makes the textbook F distribution far too optimistic.
+
+The point of this method is that each junction contributes exactly one conductance, measured over its own plateau, and the tunnelling background below the plateau doesn't enter. Hamill et al. found that the spread of these values is about half the width of the peak in the 1D histogram, so the molecular conductance comes out sharper.
+
+The step method uses PELT (Pruned Exact Linear Time, ref. 40) to describe log G as a sequence of flat levels. It finds the segmentation that minimises
+
+```latex
+\sum_\text{segments} \frac{\mathrm{SSE}}{\sigma^2} + \lambda\, 2 \ln n \times (\text{number of change points})
+```
+
+where SSE is the squared deviation of the points from their level, sigma the noise of the trace and lambda the *PELT penalty factor*. sigma comes from the median absolute difference of neighbouring points, but is never taken smaller than *noise at least*. The result is exact (the same as trying every possible segmentation), and the pruning keeps it fast. To keep it fast also for long traces, each trace is first averaged in blocks down to at most *max points per trace* points, which moves a step by at most one block. Neighbouring levels closer than *merge levels closer than* are joined. A tunnelling ramp gets cut into a staircase of short levels by such a fit, so only levels that are flat themselves (slope below *max plateau slope*) and at least *min level length* long count as plateau levels. The idea of looking at a variable number of change points per trace comes from Vaidya, Dyer and Monti (ref. 41).
+
+| Setting | Meaning | Default |
+| --- | --- | --- |
+| window: log G below / above | Part of the trace that is analysed | -2 / -5.5 |
+| min segment (points) | Shortest piece on either side of a break | 10 |
+| Chow F threshold | F needed for a rupture | 10 |
+| max plateau slope (dec/nm) | The part before the rupture, and every plateau level, must be flatter | 2 |
+| PELT penalty factor | lambda; larger gives fewer steps | 1 |
+| PELT: max points per trace | Block averaging before PELT | 400 |
+| PELT: noise at least (decades) | Lower limit of sigma | 0.05 |
+| PELT: merge levels closer than (dec) | Neighbouring levels closer than this are joined | 0.15 |
+| PELT: min level length (nm) | Shorter levels don't count as plateaus | 0.05 |
+| bins / decade | Histogram resolution | 40 |
+
+Click Find change points. The text gives the fraction of traces that rupture from a plateau, the median and mean plateau conductance with its standard error and spread, the median length to rupture, and how many plateau levels the traces have (0, 1, 2, ...). The plots are:
+
+| Plot | What it shows |
+| --- | --- |
+| Example trace | The trace chosen under *show trace* with the rupture (dashed), the plateau conductance (dotted) and the PELT levels (plateaus coloured, ramp pieces grey) |
+| Rupture conductance | Histogram of the plateau conductance, one value per junction |
+| Chow F | |slope before the break| against F for every trace; the dotted lines are the two thresholds, so you can see how cleanly junctions and blank traces separate |
+| Length to rupture | Histogram of the distance from the window start to the rupture |
+| PELT plateau levels | Histogram of all plateau levels, weighted by their length |
+| Step heights | Height of the steps between neighbouring plateau levels of a trace; a peak here means a well-defined second state |
+
+The Chow test assumes one rupture. For a trace with two plateaus it finds the first big drop, and the plateau conductance is the median of everything before it; the PELT levels show both. To choose the thresholds, look at the Chow F plot: junctions sit at small slope and large F, blank traces at large slope. If the two groups are well apart, the exact thresholds don't matter.
+
+On simulated data the method finds 70.0 % junctions when 70 % of the traces have a plateau and 31.5 % when 30 % do, with a median plateau log G of -3.55 (true value -3.5, spread 0.25). PELT gives the result of an exhaustive search on every test series, and on a synthetic trace with two plateaus at log G = -2.9 and -3.9 (0.3 nm each) it finds both levels at the right height and length.
+
+The files are `<name>_ruptures.txt` (per trace: break position, F, plateau log G, length, slopes, junction yes/no), `<name>_step_levels.txt` (every PELT level with its length, slope and whether it counts as a plateau), `<name>_step_level_histogram.txt` and `<name>_changepoints_summary.txt`.
 
 ## 7. Correlation tab
 
@@ -428,7 +490,9 @@ Don't just take the k with the highest silhouette score. With noisy data it ofte
 
 To use a cluster, pick `cluster N` in the *traces* box of Histograms, Plateau length or Correlation. When you save results, the histograms of every cluster are written automatically. Detecting the traces again removes the clusters.
 
-## 9. Flicker noise tab
+## 9. Flicker noise, events and blinking
+
+This chapter is about conductance against time: the flicker noise (9.1-9.7), the Events tab for flickering and mechanical switching (9.8), and the Blinking tab for fixed-gap I(t) measurements (9.9).
 
 The flicker noise is used to tell through-bond transport from through-space tunnelling. The noise power NP goes with the mean conductance as NP \~ G^n. If n is close to 1, the coupling is through-bond and the current goes through the molecular orbitals. If n is close to 2, it's through-space: electrons tunnel directly between the electrodes, and since G \~ exp(-beta d), fluctuations of the gap give dG \~ G and so NP \~ G^2. Anything in between is a mix.
 
@@ -460,7 +524,7 @@ The checks below are done in this order, and every rejected window is counted un
 2. Peak window: if *peak centre* and *peak sigma* are set, the mean conductance of the first and the last *end fraction* (5 %) of the window (or the first and last *end points* points, if that is above 0) both have to be within centre +/- *n sigma* x sigma (default 2). That way only junctions that stay on the molecular plateau are used. Peak from histogram fit copies centre and sigma from the last fit in the Histograms tab. If you publish, say which n sigma you used.
 3. Kurtosis (optional): throws out windows with too high excess kurtosis, i.e. with switching or spikes.
 4. Drift (optional): throws out windows where the averaged log G at the start and at the end differ by more than the limit.
-5. Stationarity (optional, on in the Morris preset): Augmented Dickey-Fuller test on log10|G| with a constant term, maximum lag ceil(12 (N/100)^(1/4)) and the lag chosen by AIC. The window is kept if p <= *ADF significance* (0.05), i.e. if the unit-root hypothesis is rejected. I checked my implementation against statsmodels and it gives the same statistic, lag and p-value.
+5. Stationarity (optional, on in the Morris preset): Augmented Dickey-Fuller test on log10|G| with a constant term, maximum lag ceil(12 (N/100)^(1/4)) and the lag chosen by AIC. The window is kept if p <= *ADF significance* (0.05), i.e. if the unit-root hypothesis is rejected. The implementation was checked against statsmodels and gives the same statistic, lag and p-value.
 
 With *subtract instrument floor* on, the mean PSD of the windows below *floor = windows below log G* is integrated over the same band and subtracted from every NP.
 
@@ -501,9 +565,9 @@ The presets don't touch your conductance range. After the Morris preset, press P
 
 n with its error, which estimator, how many traces were accepted, the frequency band, the trimming, the n sigma window and whether the ADF test was on. All of this is in `*_Noise_summary.txt` (13). If OLS and Theil-Sen differ by more than their errors there are outliers in the data; I'd trust Theil-Sen and have a look at the residual plot.
 
-As a check I ran it on simulated data with n = 1.5 and got n\_TSE = 1.52 +/- 0.02. After adding 5 % outlier windows, Theil-Sen gave 1.40 and OLS 1.33.
+The analysis was checked on simulated data with n = 1.5, which gives n\_TSE = 1.52 +/- 0.02. After adding 5 % outlier windows, Theil-Sen gave 1.40 and OLS 1.33.
 
-I tested the Rashid et al. 2025 preset on five simulated data sets with 160 ms holds on the plateau and n = 1.5. It accepted 55-73 holds per set and gave n = 1.53 on average; the Morris preset gave 1.59 on the same data. The text also reports the *minimum |Pearson r| on the scan grid*, which is how we read n off the scan in the paper. It agrees with the OLS n to within the grid step.
+The Rashid et al. 2025 preset was checked on five simulated data sets with 160 ms holds on the plateau and n = 1.5. It accepted 55-73 holds per set and gave n = 1.53 on average; the Morris preset gave 1.59 on the same data. The text also reports the *minimum |Pearson r| on the scan grid*, which is how we read n off the scan in the paper. It agrees with the OLS n to within the grid step.
 
 ### 9.8 Events tab: flickering and mechanical switching
 
@@ -528,7 +592,7 @@ Each trace ends up as *mechanical* (at least one mechanical event), *flickering*
 
 Three details of the original LabVIEW code aren't in the paper, so I went with what LabVIEW does by default. If your own settings were different, change these:
 
-- dt: LabVIEW's derivative takes dt as an input. With dt = 20 ms and 10 kHz data the peak of dG/dt is about 2.2 times the step height (I measured this on synthetic steps), so the thresholds of 0.0007 and 0.002 correspond to steps of roughly 3 x 10^-4 and 9 x 10^-4 G0.
+- dt: LabVIEW's derivative takes dt as an input. With dt = 20 ms and 10 kHz data the peak of dG/dt is about 2.2 times the step height (measured on synthetic steps), so the thresholds of 0.0007 and 0.002 correspond to steps of roughly 3 x 10^-4 and 9 x 10^-4 G0.
 - Peak width: LabVIEW's Peak Detector fits a quadratic over *width* points (50) and compares the fitted maximum with the threshold. That's *peak detection* = `quadratic fit`. The other option, `minimum width`, only keeps peaks at least *width* samples wide at half height. Be careful with it: after a 200 Hz low-pass the derivative peaks are only 20-30 samples wide at 10 kHz, so `minimum width` with 50 throws out almost everything.
 - Polarity: the Peak Detector only finds maxima, hence *count* = `rises`, and a flicker up and back down counts once. Choose `both` if you want every step counted.
 
@@ -537,6 +601,44 @@ One technical note: scipy's own Savitzky-Golay coefficients fall apart at order 
 The plots show an example trace with the filtered signal and the events marked, its derivative with both thresholds, the share of quiet, flickering and mechanical traces, the number of flickers per trace, and a transition map of log G before against log G after each event. With `holds` you also get the 2D conductance-time histogram of all holds, with the most probable log G at each time (a Gaussian fit per time bin) and its sigma as error bars. That's the plot we used for the mechanical modulation in the paper (Fig. S23): hold the junction, move the piezo back and forth with a square wave, and watch the most probable conductance follow.
 
 On synthetic traces it picks up a 4 x 10^-4 G0 flicker at G ~ 10^-3 G0 as a flicker and a jump from 10^-6 to 1.6 x 10^-3 G0 as a mechanical event, and finds nothing in a flat trace with 3 % noise.
+
+### 9.9 Blinking tab: fixed-gap I(t) measurements
+
+In a break junction the electrodes keep moving. In a blinking experiment they don't: the STM tip (or the MCBJ electrodes) is held at a fixed distance, a little too far apart for anything but tunnelling, and the current is recorded over time. Every now and then a molecule bridges the gap, and the current jumps up to the molecular level. It drops back when the molecule leaves or the contact breaks. The current switches between two levels like a telegraph signal, which is why this is called blinking, or the I(t) method (Haiss et al., refs. 42 and 43). It gives the single-molecule conductance without stretching the junction, and the times give two numbers a pulling experiment can't: how long a molecule stays in the junction and how often one arrives.
+
+The tab works on a whole recording (*segments* = `recording`, the file chosen above; for a big TDMS file only the part between *from* and *to*), or on the holds found in Data & Traces (`holds`). For each segment:
+
+1. log G is smoothed with a moving average over *smooth*.
+2. The baseline, the tunnelling current without a molecule, is a low percentile (*baseline percentile*) of log G in blocks of *baseline window*, interpolated in between. A percentile instead of a mean keeps the blinks from pulling the baseline up, and the blocks let it follow a slow drift of the gap. The percentile has to be lower than the fraction of time without a molecule; 20 % works as long as a molecule is in the gap less than 80 % of the time.
+3. A blink starts when log G rises more than *up threshold* above the baseline and ends when it falls below *down threshold*. Using two thresholds (hysteresis) means noise on top of a molecular level doesn't split it into several blinks. Gaps shorter than *min off* are closed, and blinks shorter than *min on* are dropped. Blinks cut off by the start or end of a segment are left out too, because their length isn't known.
+4. For every blink the program keeps its start, its length (the on time), its conductance (median log G while on), the baseline under it and the jump height. Blinks whose conductance is outside *blink log G from / to* (metal contacts, noise) are dropped.
+
+From all the blinks the tab takes the blink conductance (a Gaussian fit to the histogram of the blink levels, with the error of its centre) and the on-time and off-time lifetimes. For exponentially distributed times above a cut-off t_min the maximum-likelihood lifetime is
+
+```latex
+\tau = \frac{N}{N - 1}\,\left(\bar{t} - t_\mathrm{min}\right), \qquad \delta\tau = \tau / \sqrt{N}
+```
+
+with t_min the shortest time measured, so blinks too short to be detected don't bias tau. tau_on is the lifetime of the molecular junction, and 1/tau_off is the rate at which molecules arrive, which depends on the concentration and the gap. The text also gives the blink rate (blinks per second) and the fraction of the time a molecule is in the gap.
+
+| Setting | Meaning | Default |
+| --- | --- | --- |
+| segments | `recording` or `holds` | recording |
+| smooth (ms) | Moving average before the detection | 1 |
+| baseline window (s), baseline percentile | Block length and percentile of the baseline | 0.5, 20 |
+| up / down threshold (decades) | Blink starts above up, ends below down (relative to the baseline) | 0.6 / 0.3 |
+| min on, min off (ms) | Shortest blink; shortest gap between two blinks | 1, 0.5 |
+| blink log G from / to | Window for the blink conductance | -6 / -1 |
+| bins / decade, time bins | Histogram resolution | 40, 40 |
+| aligned: before / after (ms) | Time range of the aligned histogram | 10 / 50 |
+
+The plots are an example segment with the smoothed signal, the baseline, the up threshold and the blinks shaded, the blink conductance histogram with its Gaussian, the on-time and off-time histograms on a log scale with the exponential fits, the blink conductance against the on time, and a 2D histogram of log G against the time from the blink start. The last one shows how sharp the jump is and whether the level relaxes during a blink. Add simulated makes a 20 s recording with known answers.
+
+Two things to watch. First, the up threshold has to sit clearly between the noise of the baseline and the jump height. The median jump height in the text tells you where the jumps are; if many blinks have heights close to the threshold, the threshold is cutting into the noise. Second, the on-time histogram should look like a straight line on the log scale. A bend at short times usually means *min on* or the smoothing is too short; two slopes mean two kinds of junction.
+
+On the simulated recording (blinks at log G = -3.5 with sigma 0.15, tau_on = 20 ms, tau_off = 100 ms, 0.08 decades of noise and a drifting baseline) the tab finds 171 of the 172 blinks, a blink conductance of -3.53 +/- 0.01, tau_on = 20.2 +/- 1.5 ms and tau_off = 95 +/- 7 ms.
+
+The files are `<name>_blinks.txt` (every blink: segment, start, duration, log G, baseline, height), `<name>_blink_off_times.txt`, `<name>_blink_histogram.txt` and `<name>_blinking_summary.txt`.
 
 ## 10. I-V, EGaIn and Thermopower tabs
 
@@ -586,7 +688,7 @@ The program can do this integral in two ways. With `analytic` it uses the fact t
 \int T(E)\, f(E - \mu)\, dE = \pi\Gamma \left[\frac{1}{2} - \frac{1}{\pi}\, \mathrm{Im}\, \psi\!\left(\frac{1}{2} + \frac{\Gamma - i(\mu - \varepsilon)}{2\pi k_B T}\right)\right]
 ```
 
-With `energy grid` the integral is done numerically, the way we did it in the paper (Rashid et al. 2025, SI 2.4): from -10 to 10 eV in steps of 0.02 meV. To keep that fast, T(E) is integrated once and the Fermi functions come in through a single FFT convolution per evaluation. The two methods agree to better than 10^-9 (I checked at 0 and 300 K with eps0 = 1.1 eV and Gamma = 11.3 meV). Single curves are always fitted with the closed form. The grid is used for the mean and most probable curves and starts from the closed-form result, so even a grid fit takes less than a second.
+With `energy grid` the integral is done numerically, the way we did it in the paper (Rashid et al. 2025, SI 2.4): from -10 to 10 eV in steps of 0.02 meV. To keep that fast, T(E) is integrated once and the Fermi functions come in through a single FFT convolution per evaluation. The two methods agree to better than 10^-9 (checked at 0 and 300 K with eps0 = 1.1 eV and Gamma = 11.3 meV). Single curves are always fitted with the closed form. The grid is used for the mean and most probable curves and starts from the closed-form result, so even a grid fit takes less than a second.
 
 Besides the mean forward and backward curves, the program also builds the most probable I-V curve. It bins all curves by bias, fits a Gaussian to the current distribution in each bin and takes its centre, with sigma as the error bar. This is the blue line in Fig. S22 of our paper, and a few odd curves bother it much less than they bother the mean. It gets fitted as well; *weight by 1/sigma* weights each bias bin by its spread.
 
@@ -625,7 +727,7 @@ In the single-level model with Gamma << eps0, the two transition voltages give e
 \varepsilon_0 = \frac{2\,|V_t^+ V_t^-|}{\sqrt{(V_t^+)^2 + (V_t^-)^2 + \frac{10}{3}|V_t^+ V_t^-|}}, \qquad a = \frac{(V_t^+ + V_t^-)\,\varepsilon_0}{4\,|V_t^+ V_t^-|}
 ```
 
-For a symmetric junction this reduces to eps0 = (sqrt(3)/2) V_t, about 0.87 V_t, and that's what is used if only one polarity has a V_t. I checked both formulas against the exact model: with eps0 = 0.8 eV, Gamma = 10 meV and a = 0.1 the curves give V_t+ = 1.19 V and V_t- = -0.75 V, and from those the formulas give back eps0 = 0.800 eV and a = 0.100.
+For a symmetric junction this reduces to eps0 = (sqrt(3)/2) V_t, about 0.87 V_t, and that's what is used if only one polarity has a V_t. Both formulas were checked against the exact model: with eps0 = 0.8 eV, Gamma = 10 meV and a = 0.1 the curves give V_t+ = 1.19 V and V_t- = -0.75 V, and from those the formulas give back eps0 = 0.800 eV and a = 0.100.
 
 It's worth comparing the eps0 from TVS with the one from the fit. If they disagree a lot, the curves probably aren't single-level-like: there may be several levels, a strong asymmetry, or heating at high bias.
 
@@ -678,7 +780,7 @@ The confidence interval and the length dependence are
 
 The plots are for the data set chosen in *show*: every sweep with <log|J|> +/- sigma_log, the 2D histogram of log|J| against bias, the log|J| histogram at the report bias with its Gaussian, the log R histogram, the V_trans histograms, the single-level fit and, once you've clicked Fit beta, log|J| against length.
 
-To check all this I made simulated sets of 30 junctions with sigma_log = 0.4, a rectification of log R = 0.3 and beta = 0.9. The tab finds <log|J|> within its confidence interval of the true value, log R = 0.30 +/- 0.08, all the shorts, and beta = 0.904 +/- 0.016. Repeating it 20 times with three sets of 20 junctions gave beta = 0.92 on average, with a scatter of 0.087 and an average reported error of 0.095. So the error bar is realistic: 65 % of the runs land within 1 sigma, where 68 % is expected.
+The tab was checked on simulated sets of 30 junctions with sigma_log = 0.4, a rectification of log R = 0.3 and beta = 0.9. It finds <log|J|> within its confidence interval of the true value, log R = 0.30 +/- 0.08, all the shorts, and beta = 0.904 +/- 0.016. Repeating it 20 times with three sets of 20 junctions gave beta = 0.92 on average, with a scatter of 0.087 and an average reported error of 0.095. So the error bar is realistic: 65 % of the runs land within 1 sigma, where 68 % is expected.
 
 In a paper, give <log|J|> and sigma_log at a stated bias, the number of junctions and of sweeps, the yield, the contact area and how you measured it, and the confidence interval with alpha. Remember that the geometric contact area isn't the electrical one (Simeone et al. 2013 estimate the electrical area at 10^-4 of it), so J0 can only be compared between data sets measured the same way.
 
@@ -814,6 +916,12 @@ The text files are tab-separated with one header line, so Origin, Excel and Pyth
 | `<name>_junctions.txt` | Per trace: junction yes/no, flat plateau length, plateau log G | Junction statistics |
 | `<name>_junction_blocks.txt` | Per block: mean trace number, yield, its error, median plateau log G, traces | Junction statistics |
 | `<name>_junction_summary.txt` | Yield, medians, drift, settings | Junction statistics |
+| `<name>_ruptures.txt` | Per trace: break position, Chow F, plateau log G, length to rupture, slopes, junction yes/no | Change points |
+| `<name>_step_levels.txt`, `<name>_step_level_histogram.txt` | Every PELT level (log G, length, slope, plateau yes/no) and the length-weighted level histogram | Change points |
+| `<name>_changepoints_summary.txt` | Fractions, medians, settings | Change points |
+| `<name>_blinks.txt` | Every blink: segment, start, duration, log G, baseline, jump height | Blinking |
+| `<name>_blink_off_times.txt`, `<name>_blink_histogram.txt` | Times between blinks; histogram of the blink conductance | Blinking |
+| `<name>_blinking_summary.txt` | Blink conductance, lifetimes, rate, settings | Blinking |
 | `<name>_piezo_modulation.txt` | t, logG, amplitudes, beta and phase per window | Piezo modulation |
 | `figures/<name>_<plot>.pdf` and `.png` | Every plot as its own figure (13.1) | every tab |
 | `<name>.opju` | Origin project with the plot data and graphs, if "plot with" includes Origin (13.1) | every tab |
@@ -846,6 +954,8 @@ All of this can be changed under File -> Figure export settings (width, font, fo
 | `junction_plateau_conductance_histogram`, `junction_conductance_vs_trace`, `junction_yield_vs_trace`, `junction_plateau_length_histogram`, `junction_length_vs_conductance` | Junction yield and plateau statistics | Junction statistics |
 | `IV_curves`, `IV_current_histogram`, `IV_conductance_histogram`, `IV_dIdV_histogram` | I-V curves and histograms | I-V |
 | `events_example_trace`, `events_example_derivative`, `events_trace_classes`, `events_flickers_per_trace`, `events_transition_map`, `events_hold_time_histogram` | Events | Events |
+| `changepoints_example`, `changepoints_rupture_conductance`, `changepoints_chow_F`, `changepoints_rupture_length`, `changepoints_levels`, `changepoints_step_heights` | Rupture and step analysis | Change points |
+| `blinking_example`, `blinking_conductance_histogram`, `blinking_on_times`, `blinking_off_times`, `blinking_level_vs_time`, `blinking_aligned_histogram` | Blinking | Blinking |
 | `EGaIn_<set>_egain_JV`, `..._logJ_2D_histogram`, `..._logJ_histogram`, `..._rectification_histogram`, `..._transition_voltage_histogram`, `..._SLM_fit`, `..._beta` | Ensemble junctions, one set per data set | EGaIn |
 | `Thermo_<set>_thermo_voltage_histograms`, `..._thermo_voltage_vs_dT`, `..._thermo_seebeck_histogram`, `..._thermo_seebeck_vs_logG` | Thermopower, one set per data set | Thermopower |
 | `IV_SLM_fit`, `IV_Fowler_Nordheim`, `IV_transition_voltage_histogram`, `IV_SLM_parameters`, `IV_eps0_histogram` | Single-level model and TVS | I-V, after the model fit |
@@ -894,17 +1004,23 @@ File -> Save settings writes all settings to a JSON file and File -> Load settin
 | Window empty or tiny on a 4K screen | Set the Windows display scaling to 150-200 %. |
 | "No column ... available: ..." | The column name or number isn't in the file. The message lists what is there; Show columns (4.1) does too. Numbers start at 0. |
 | Igor file: "No numeric waves found" | The file has only text waves, or igor2 is missing (`py -m pip install igor2`). |
+| Excel, MATLAB v7.3 or HDF5 file: "... needs openpyxl / h5py" | Install the missing package (`py -m pip install openpyxl h5py`); the exe has both. |
+| A text file with a comment line at the top isn't read | Comment lines are skipped as long as the data lines start with a number. If the header has a different number of names than there are columns, the columns are just numbered (Show columns). |
+| Change points: almost every trace is a junction, also for a blank measurement | Lower *max plateau slope* or raise *Chow F threshold*; look at the Chow F plot (6.5). |
+| Change points: PELT gives many levels per trace | Raise *PELT penalty factor* or *noise at least*. |
+| Blinking: hundreds of very short blinks | The up threshold is in the noise. Raise it, or smooth more. |
+| Blinking: no blinks although the jumps are visible | The blink level is outside *blink log G from / to*, or the molecule is in the gap more than 80 % of the time (lower the baseline percentile). |
 | Error message about a file | The file is broken or isn't break-junction data. Open it in a text editor or a TDMS viewer and have a look. |
 
 You can load several files at once; they're analysed together, the trace numbers just continue and every trace remembers which file it came from. The program never changes your data files, it only reads them and writes results to the folder you pick.
 
 To repeat an old analysis, load the `*_config.json` from its results folder with File -> Load settings, load the same data and run the same tabs.
 
-To check that an installation works, open a command prompt in the program folder and run `GZero.exe --selftest report.txt` (or `py GZero.py --selftest report.txt`). It runs the simulation, trace detection, histogram fit, dwell time, clustering, noise analysis, junction yield, event detection, I-V detection, the single-level fit (also at 300 K on the energy grid with Levenberg-Marquardt) and TVS, the EGaIn statistics with beta on simulated junctions and a column-pair file, the thermopower fit, and the figure export without opening a window and writes the results to `report.txt`. If everything is fine the last line is `SELFTEST OK`.
+To check that an installation works, open a command prompt in the program folder and run `GZero.exe --selftest report.txt` (or `py GZero.py --selftest report.txt`). It runs the simulation, trace detection, histogram fit, dwell time, clustering, noise analysis, junction yield, event detection, I-V detection, the single-level fit (also at 300 K on the energy grid with Levenberg-Marquardt) and TVS, the EGaIn statistics with beta on simulated junctions and a column-pair file, the thermopower fit, reading a large TDMS file in pieces, every file format (gzip text, Excel, MATLAB, NumPy, HDF5, LabVIEW), blink detection, change-point detection and the figure export without opening a window and writes the results to `report.txt`. If everything is fine the last line is `SELFTEST OK`.
 
 ## 15. References
 
-I checked entries 1-24 against Crossref on 8 October 2026. The table at the end lists what to cite for which analysis.
+Entries 1-24 were checked against Crossref on 8 October 2026. The table at the end lists what to cite for which analysis.
 
 ### 15.1 Break-junction technique and background
 
@@ -963,9 +1079,18 @@ I checked entries 1-24 against Crossref on 8 October 2026. The table at the end 
 36. P. Reddy, S.-Y. Jang, R. A. Segalman, A. Majumdar, "Thermoelectricity in molecular junctions", *Science* 315, 1568-1571 (2007). [doi:10.1126/science.1137149](https://doi.org/10.1126/science.1137149) Thermovoltage histograms per dT and S from the slope.
 37. J. R. Widawsky, P. Darancet, J. B. Neaton, L. Venkataraman, "Simultaneous determination of conductance and thermopower of single molecule junctions", *Nano Letters* 12, 354-358 (2012). [doi:10.1021/nl203634m](https://doi.org/10.1021/nl203634m) Conductance and thermopower in the same STM break-junction measurement; sign of S for HOMO- and LUMO-conducting junctions.
 
-I took the details of 26-37 from the publishers' and university repositories' pages and the code repositories in October 2026. They haven't been re-checked against Crossref like 1-24.
+### 15.7 Change points and blinking
 
-### 15.7 What to cite for each analysis
+38. J. M. Hamill, W. Bro-Jorgensen, Z. Balogh, H. Li, S. Leitherer, D. Solomon, A. Halbritter, G. C. Solomon, "Improving single-molecule conductance measurements with change point detection from the econometrics toolbox", arXiv:2401.12769 (2024). [arxiv.org/abs/2401.12769](https://arxiv.org/abs/2401.12769) Chow test for the rupture of each trace; plateau conductance per junction. Journal version not checked.
+39. G. C. Chow, "Tests of equality between sets of coefficients in two linear regressions", *Econometrica* 28, 591-605 (1960). [doi:10.2307/1910133](https://doi.org/10.2307/1910133)
+40. R. Killick, P. Fearnhead, I. A. Eckley, "Optimal detection of changepoints with a linear computational cost", *J. Am. Stat. Assoc.* 107, 1590-1598 (2012). [doi:10.1080/01621459.2012.737745](https://doi.org/10.1080/01621459.2012.737745) The PELT algorithm.
+41. A. Vaidya, J. Dyer, O. L. A. Monti, "Understanding conductance fluctuations in single-molecule break junctions: a statistical approach", APS March Meeting 2026, abstract. [meetings-archive.aps.org](https://meetings-archive.aps.org/smt/2026/mar-s71/8/) PELT-R: a variable number of change points per trace.
+42. W. Haiss, H. van Zalinge, S. J. Higgins, D. Bethell, H. Hobenreich, D. J. Schiffrin, R. J. Nichols, "Redox state dependence of single molecule conductivity", *J. Am. Chem. Soc.* 125, 15294-15295 (2003). [doi:10.1021/ja038214e](https://doi.org/10.1021/ja038214e) The I(t) (blinking) method.
+43. W. Haiss, C. Wang, I. Grace, A. S. Batsanov, D. J. Schiffrin, S. J. Higgins, M. R. Bryce, C. J. Lambert, R. J. Nichols, "Precision control of single-molecule electrical junctions", *Nature Materials* 5, 995-1002 (2006). [doi:10.1038/nmat1781](https://doi.org/10.1038/nmat1781) I(s) and I(t) measurements at controlled electrode spacing.
+
+The details of 26-43 were taken from the publishers' and university repositories' pages, arXiv and the code repositories in October 2026. They haven't been re-checked against Crossref like 1-24.
+
+### 15.8 What to cite for each analysis
 
 | Analysis in this program | Cite |
 | --- | --- |
@@ -982,5 +1107,8 @@ I took the details of 26-37 from the publishers' and university repositories' pa
 | EGaIn statistics, yield, rectification | 32; 34, 35 for the software you compare with |
 | beta and J0 from a length series | 33 |
 | Thermopower, Seebeck coefficient | 36, 37; 34 for the XMe thermopower module |
+| Rupture of each trace, plateau conductance per junction (Change points) | 38, 39 |
+| Steps between levels (PELT) | 40, 41 |
+| Blinking / I(t) | 42, 43 |
 | PSD (Welch), smoothing | 22, 23 |
 | Libraries used | 24, 25 |

@@ -27,10 +27,11 @@ from .tabs_egain import EGaInTab
 from .tabs_thermo import ThermoTab
 from .tabs_noise import EventsTab, IVTab, ModulationTab, NoiseTab
 from .tabs_stats import ClusterTab, CorrelationTab, HistogramTab, JunctionTab, PlateauTab
+from .tabs_steps import BlinkingTab, ChangePointTab
 from .widgets import error_box
 
 APP_NAME = "GZero"
-APP_VERSION = "1.4"
+APP_VERSION = "1.5"
 
 ABOUT = f"""<h3>{APP_NAME} {APP_VERSION}</h3>
 <p>Conversion and statistical analysis of single-molecule break-junction measurements
@@ -79,10 +80,11 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.setCentralWidget(self.tabs)
         self._tabs = {}
-        for cls in (ConvertTab, DataTab, HistogramTab, PlateauTab, JunctionTab, CorrelationTab, ClusterTab,
-                    NoiseTab, EventsTab, IVTab, ModulationTab, EGaInTab, ThermoTab,
+        for cls in (ConvertTab, DataTab, HistogramTab, PlateauTab, JunctionTab, ChangePointTab, CorrelationTab,
+                    ClusterTab, NoiseTab, EventsTab, BlinkingTab, IVTab, ModulationTab, EGaInTab, ThermoTab,
                     SimulationTab):
             tab = cls(self.project, self)
+            tab.connect_resets()
             self._tabs[tab.title] = tab
             self.tabs.addTab(tab, tab.title)
         self.tabs.setCurrentWidget(self._tabs["Data & Traces"])

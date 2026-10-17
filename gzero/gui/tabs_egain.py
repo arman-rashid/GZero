@@ -93,7 +93,7 @@ class EGaInTab(AnalysisTab):
 
     def add_files(self):
         paths, _ = QFileDialog.getOpenFileNames(self, "Junction files (one per junction)", self.main.last_dir,
-                                                "Data (*.txt *.csv *.dat *.tsv *.pxp *.ibw);;All files (*)")
+                                                bj_io.file_filter(tdms=False))
         if not paths:
             return
         self.main.last_dir = os.path.dirname(paths[0])

@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QComboBox, QFormLayout, QGroupBox, QHBoxLayout, QL
 
 from .. import events as evm, export as ex, figures as figs, iv, ivmodels as ivm, modulation as md, noise as nz, style
 from .base import AnalysisTab
-from .widgets import PlotPanel, SettingsForm, decimate_for_plot, error_box, make_button, scroll_panel
+from .widgets import PlotPanel, SettingsForm, error_box, make_button, scroll_panel
 
 NOISE_LABELS = {
     "source": "segments", "cut_initial_ms": "trim start (ms)", "cut_final_ms": "trim end (ms)",
@@ -80,6 +80,7 @@ def _fill_recordings(project, combo):
 
 class NoiseTab(AnalysisTab):
     title = "Flicker noise"
+    reset_on_traces = {"res": None, "scaling": None, "segments": list}
 
     def __init__(self, project, main):
         super().__init__(project, main)
@@ -325,6 +326,7 @@ EVENT_TIPS = {
 
 class EventsTab(AnalysisTab):
     title = "Events"
+    reset_on_traces = {"res": None, "th": None, "segs": list}
 
     def __init__(self, project, main):
         super().__init__(project, main)
@@ -467,6 +469,7 @@ IVM_TIPS = {
 
 class IVTab(AnalysisTab):
     title = "I-V"
+    reset_on_recordings = {"curves": list, "models": None}
 
     def __init__(self, project, main):
         super().__init__(project, main)
@@ -608,6 +611,7 @@ MOD_LABELS = {"f_mod": "modulation frequency (Hz, 0 = auto)", "periods_per_windo
 
 class ModulationTab(AnalysisTab):
     title = "Piezo modulation"
+    reset_on_recordings = {"res": None}
 
     def __init__(self, project, main):
         super().__init__(project, main)

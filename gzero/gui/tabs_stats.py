@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass, asdict
 
 import numpy as np
-from PySide6.QtWidgets import QComboBox, QFormLayout, QGroupBox, QLabel, QTableWidget, QTableWidgetItem, QVBoxLayout
+from PySide6.QtWidgets import QComboBox, QFormLayout, QGroupBox, QLabel, QTableWidget, QTableWidgetItem
 
 from .. import analysis as an, clustering as cl, figures as figs, junctions as jn
 from .. import export as ex
@@ -105,9 +105,12 @@ class HistogramTab(AnalysisTab):
         traces = self.selector.traces()
         x, y = an.hist1d(traces, hs)
         zc, gc, H = an.hist2d(traces, hs)
-        self.res = {"x": x, "y": y, "zc": zc, "gc": gc, "H": H, "n": len(traces), "hs": hs,
-                    "label": self.selector.label(), "peaks": self.res.get("peaks") if self.res.get("n") == len(traces) else None,
-                    "dwell": self.res.get("dwell") if self.res.get("n") == len(traces) else None}
+        # an earlier peak fit stays only if it was made on exactly this histogram
+        key = (repr(hs), self.selector.label(), tuple((t.rec_name, t.index, t.start) for t in traces))
+        same = self.res.get("key") == key
+        self.res = {"x": x, "y": y, "zc": zc, "gc": gc, "H": H, "n": len(traces), "hs": hs, "key": key,
+                    "label": self.selector.label(), "peaks": self.res.get("peaks") if same else None,
+                    "dwell": self.res.get("dwell") if same else None}
         self._draw(fs)
 
     def fit(self):
@@ -343,7 +346,7 @@ class PlateauTab(AnalysisTab):
         return f"{prefix}_{self.res['label']}" if self.res and self.res["label"] != "all" else prefix
 
     def has_results(self):
-        return bool(self.res) and self.res["n"] > 0
+        return bool(self.res) and self.res["n"] > 0 and bool(self.res.get("windows"))
 
     def export(self, folder, prefix):
         if not self.has_results():
@@ -381,6 +384,7 @@ JUNCTION_TIPS = {
 
 class JunctionTab(AnalysisTab):
     title = "Junction statistics"
+    reset_on_traces = {"res": None}
 
     def __init__(self, project, main):
         super().__init__(project, main)
@@ -472,6 +476,7 @@ class CorrelationSettings:
 
 class CorrelationTab(AnalysisTab):
     title = "Correlation"
+    reset_on_traces = {"res": dict}
 
     def __init__(self, project, main):
         super().__init__(project, main)

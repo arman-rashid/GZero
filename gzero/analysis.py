@@ -60,7 +60,7 @@ def hist2d(traces: list[Trace], hs: HistSettings):
     z = np.concatenate([t.z for t in traces])
     y = np.concatenate([t.logG for t in traces])
     H, _, _ = np.histogram2d(z, y, [ze, ge])
-    return centers(ze), centers(ge), _norm(H, len(traces), hs.normalize)
+    return centers(ze), centers(ge), _norm(H, len(traces), hs.normalize, (ze[1] - ze[0]) * (ge[1] - ge[0]))
 
 
 def trace_hist(trace: Trace, edges: np.ndarray) -> np.ndarray:

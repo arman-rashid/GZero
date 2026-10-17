@@ -94,6 +94,8 @@ def _runs(state: np.ndarray):
 
 def piezo_segments(piezo: np.ndarray, fs: float, ss: SegmentSettings):
     """Return list of (start, stop, direction) with direction in {+1, -1, 0 (hold)}."""
+    if len(piezo) < 3:
+        return []
     w = max(3, int(round(ss.smooth_ms * 1e-3 * fs)) | 1)
     xs = uniform_filter1d(np.asarray(piezo, float), w, mode="nearest")
     xs = uniform_filter1d(xs, w, mode="nearest")

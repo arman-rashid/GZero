@@ -2,7 +2,7 @@
 
 Does the same as statsmodels' adfuller with default settings (constant
 term, maxlag = ceil(12 (n/100)^0.25), lag picked by AIC, MacKinnon
-p-value). It's here so the exe doesn't need statsmodels. I checked it
+p-value). It's here so the exe doesn't need statsmodels. The code was checked
 against statsmodels on 300 random series and the results are identical.
 
 H0 is a unit root, so a small p-value means the trace is stationary.
